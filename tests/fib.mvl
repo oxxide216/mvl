@@ -1,0 +1,14 @@
+proc fib n: s64 -> s64
+  if n <= 1 jump body
+  jump next
+ body:
+  ret n
+ next:
+  t = @sub n 1
+  a = call fib t
+
+  t = @sub n 2
+  b = call fib t
+
+  t = @add a b
+  ret t

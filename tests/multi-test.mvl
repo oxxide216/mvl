@@ -1,0 +1,72 @@
+include "fib.mvl"
+
+static data: s64
+
+proc main
+  t = 6
+  t0 = 0
+  t1 = 5
+ l0:
+  t0 = @add t0 1
+  t1 = @ls t0 10
+  if t1 == 1 jump l0
+
+  call add t0 t1
+
+  call rec 0
+
+  @write 1 "hello world\n" 12
+
+  call stack_alloc
+  call heap_alloc
+
+  char = '\n'
+  ref = @ref char
+  @write 1 ref 1
+
+  t2 = call fib 10
+  @exit t2
+
+  ret
+
+proc add a: s64 b: s64 -> s64
+  t = @add a b
+  ret t
+
+proc rec n: s64
+  if n < 10 jump next
+  ret
+ next:
+  t = @add n 1
+  call rec t
+
+proc return -> s64
+  t = 0
+  t = t
+  ret t
+
+proc pointers -> s64
+  a = 5
+  b = 0
+  c = @ref a
+  @deref_put c 10
+  d = @deref c
+
+  ret d
+
+proc params n: s64 -> s64
+  call rec n
+
+  ret n
+
+proc stack_alloc -> s64
+  t = alloc 8
+  @deref_put t 112
+  t = @deref t
+  ret t
+
+proc heap_alloc -> s64
+  t = @mmap 8
+  @deref_put t 75
+  t = @deref t
+  ret t
