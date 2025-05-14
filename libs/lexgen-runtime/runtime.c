@@ -1,10 +1,5 @@
 #include "runtime.h"
 
-void tt_push_row(TransitionTable *tt, TransitionCol *cols, u32 cols_count) {
-  TransitionRow new_row = { cols, cols_count };
-  DA_APPEND(*tt, new_row);
-}
-
 static bool row_matches(TransitionRow *row, Str text, u32 *lexeme_len) {
   u32 state = 1;
 
@@ -43,13 +38,13 @@ static bool row_matches(TransitionRow *row, Str text, u32 *lexeme_len) {
   return false;
 }
 
-Str tt_matches(TransitionTable *tt, Str *text, u32 *token_id) {
+Str table_matches(TransitionTable *table, Str *text, u32 *token_id) {
   Str lexeme = { text->ptr, 0 };
   u32 longest_token_id = (u32) -1;
 
-  for (u32 i = 0; i < tt->len; ++i) {
+  for (u32 i = 0; i < table->len; ++i) {
     u32 new_lexeme_len = 0;
-    bool row_match = row_matches(tt->items + i, *text,
+    bool row_match = row_matches(table->items + i, *text,
                                  &new_lexeme_len);
 
     if (row_match && new_lexeme_len > (u32) lexeme.len) {

@@ -1,6 +1,6 @@
 #include "../gen.h"
+#include "../shl_log.h"
 #include "../ops.h"
-#include "../log.h"
 #include "../proc-ctx.h"
 #include "../misc.h"
 #include "../misc-platform.h"

@@ -1,9 +1,9 @@
 #include <ctype.h>
 
 #include "general.h"
-#include "../ops.h"
-#include "../log.h"
 #include "../shl_str.h"
+#include "../shl_log.h"
+#include "../ops.h"
 
 static Str reserve_reg_loc(StringBuilder *sb, Loc loc, Str arg) {
   Str reserved = loc.str;

@@ -1,7 +1,7 @@
 #include <string.h>
 
+#include "shl_log.h"
 #include "proc-ctx.h"
-#include "log.h"
 #include "opt.h"
 #include "misc.h"
 #include "ops.h"

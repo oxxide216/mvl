@@ -1,5 +1,5 @@
 #include "mvm.h"
-#include "log.h"
+#include "shl_log.h"
 #include "checker.h"
 #include "opt.h"
 #include "gen.h"

@@ -1,5 +1,5 @@
 #include "misc-platform.h"
-#include "log.h"
+#include "shl_log.h"
 
 static u32 x86_64_indices[ValueKindCount] = {
   [ValueKindUnit] = 0,

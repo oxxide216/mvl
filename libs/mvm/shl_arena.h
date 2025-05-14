@@ -7,8 +7,6 @@ void *aalloc(unsigned int amount);
 
 #include <stdlib.h>
 
-#include "log.h"
-
 #define DEFAULT_ARENA_CAP 256
 
 typedef struct Arena Arena;

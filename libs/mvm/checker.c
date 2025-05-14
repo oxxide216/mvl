@@ -1,5 +1,5 @@
 #include "checker.h"
-#include "log.h"
+#include "shl_log.h"
 #include "proc-ctx.h"
 #include "misc.h"
 #include "misc-platform.h"

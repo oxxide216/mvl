@@ -1,6 +1,6 @@
+#include "shl_log.h"
 #include "ops.h"
 #include "misc.h"
-#include "log.h"
 
 static bool instr_op_eq(ProcedureContext *proc_ctx, InstrOp *op_instr, Op *op) {
   if (!str_eq(op_instr->name, op->name))

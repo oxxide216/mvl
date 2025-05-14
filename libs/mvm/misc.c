@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "misc.h"
-#include "log.h"
+#include "shl_log.h"
 
 u32 get_value_size(ValueKind kind) {
   switch (kind) {

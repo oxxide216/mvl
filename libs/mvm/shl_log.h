@@ -1,5 +1,5 @@
-#ifndef LOG_H
-#define LOG_H
+#ifndef SHL_LOG_H
+#define SHL_LOG_H
 
 #include <stdio.h>
 
@@ -33,4 +33,4 @@
 #define WARN(...) PWARN("", __VA_ARGS__)
 #define INFO(...) PINFO("", __VA_ARGS__)
 
-#endif // LOG_H
+#endif // SHL_LOG_H
