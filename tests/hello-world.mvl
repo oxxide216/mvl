@@ -1,0 +1,13 @@
+proc main
+  a = 2
+  b = 2
+  t = @add a b
+  @exit t
+
+proc add a: s64 b: s64 -> s64
+  asm "add" a b
+  ret a
+
+proc exit code: s64
+  asm "mov rax,60"
+  asm "syscall"

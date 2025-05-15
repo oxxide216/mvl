@@ -1,4 +1,5 @@
 #include <string.h>
+#include <ctype.h>
 
 #include "compiler.h"
 #include "../libs/lexgen-runtime/runtime.h"
@@ -43,22 +44,6 @@ static Arg parser_parse_arg(Parser *parser, Program *program,
   return token_to_arg(arg, program, static_segment_index);
 }
 
-static void compile_op(Parser *parser,
-                       Procedure *proc, Program *program,
-                       Str dest, u32 *static_segment_index) {
-  Token *op = parser_expect_token(parser, MASK(TT_IDENT));
-
-  Args args = create_args();
-
-  while (parser_peek_token(parser) &&
-         parser_peek_token(parser)->id != TT_NEWLINE) {
-    Arg arg = parser_parse_arg(parser, program, static_segment_index);
-    args_push_arg(&args, arg);
-  }
-
-  proc_push_op(proc, op->lexeme, dest, args);
-}
-
 static void compile_call(Parser *parser, Program *program,
                          Procedure *proc, Str dest,
                          u32 *static_segment_index) {
@@ -87,12 +72,12 @@ void compile(Tokens tokens, Program *program) {
                                                 MASK(TT_PROC) |
                                                 MASK(TT_JUMP) |
                                                 MASK(TT_IF) |
-                                                MASK(TT_CALL) |
                                                 MASK(TT_RET) |
                                                 MASK(TT_IDENT) |
                                                 MASK(TT_AT) |
                                                 MASK(TT_INCLUDE) |
-                                                MASK(TT_STATIC));
+                                                MASK(TT_STATIC) |
+                                                MASK(TT_ASM));
 
     if (token->id != TT_PROC &&
         token->id != TT_NEWLINE &&
@@ -175,11 +160,6 @@ void compile(Tokens tokens, Program *program) {
       proc_cond_jump(proc, rel_op, arg0, arg1, label_name->lexeme);
     } break;
 
-    case TT_CALL: {
-      compile_call(&parser, program, proc,
-                   (Str) {0}, &static_segment_index);
-    } break;
-
     case TT_RET: {
       if (parser_peek_token(&parser)->id == TT_NEWLINE) {
         proc_return(proc);
@@ -199,23 +179,16 @@ void compile(Tokens tokens, Program *program) {
         break;
       }
 
-      next = parser_expect_token(&parser, MASK(TT_CALL) |
-                                          MASK(TT_IDENT) |
+      next = parser_expect_token(&parser, MASK(TT_IDENT) |
                                           MASK(TT_NUMBER) |
                                           MASK(TT_AT) |
                                           MASK(TT_ALLOC) |
                                           MASK(TT_STR_LIT) |
                                           MASK(TT_CHAR_LIT));
 
-      if (next->id == TT_CALL) {
+      if (next->id == TT_AT) {
         compile_call(&parser, program, proc,
                      token->lexeme, &static_segment_index);
-        break;
-      }
-
-      if (next->id == TT_AT) {
-        compile_op(&parser, proc, program,
-                   token->lexeme, &static_segment_index);
         break;
       }
 
@@ -225,14 +198,12 @@ void compile(Tokens tokens, Program *program) {
         break;
       }
 
-      Args args = create_args();
-      args_push_arg(&args, token_to_arg(next, program, &static_segment_index));
-
-      proc_push_op(proc, STR_LIT("put"), token->lexeme, args);
+      Arg arg = token_to_arg(next, program, &static_segment_index);
+      proc_assign(proc, token->lexeme, arg);
     } break;
 
     case TT_AT: {
-      compile_op(&parser, proc, program, (Str) {0}, &static_segment_index);
+      compile_call(&parser, program, proc, token->lexeme, &static_segment_index);
     } break;
 
     case TT_INCLUDE: {
@@ -246,6 +217,25 @@ void compile(Tokens tokens, Program *program) {
 
       Value value = { str_to_value(kind->lexeme).kind, {0} };
       program_push_static_var(program, name->lexeme, value);
+    } break;
+
+    case TT_ASM: {
+      Token *text = parser_expect_token(&parser, MASK(TT_STR_LIT) |
+                                                 MASK(TT_NORET));
+
+      bool no_return = text->id == TT_NORET;
+
+      if (no_return)
+        text = parser_expect_token(&parser, MASK(TT_STR_LIT));
+
+      Args args = {0};
+      while (parser_peek_token(&parser) &&
+             parser_peek_token(&parser)->id != TT_NEWLINE) {
+        Arg arg = parser_parse_arg(&parser, program, &static_segment_index);
+        args_push_arg(&args, arg);
+      }
+
+      proc_inline_asm(proc, text->lexeme, args, no_return);
     } break;
 
     default: {

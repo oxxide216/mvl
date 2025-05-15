@@ -103,8 +103,8 @@ int main(i32 argv, i8 **argc) {
   Program program = {0};
   compile(tokens, &program);
 
-  program_optimize(&program, TargetPlatformLinux_X86_64);
-  Str _asm = program_gen_code(&program, TargetPlatformLinux_X86_64);
+  program_optimize(&program, Arch_X86_64);
+  Str _asm = program_gen_code(&program, Arch_X86_64);
 
   if (!silent_mode)
     printf("Assembly:\n"STR_FMT, STR_ARG(_asm));
