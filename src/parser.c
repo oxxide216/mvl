@@ -18,6 +18,7 @@ static Str token_id_names[] = {
   STR_LIT("`static`"),
   STR_LIT("`asm`"),
   STR_LIT("`noret`"),
+  STR_LIT("`init`"),
   STR_LIT("identifier"),
   STR_LIT("number"),
   STR_LIT("`(`"),

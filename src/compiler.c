@@ -64,8 +64,10 @@ static void compile_call(Parser *parser, Program *program,
 
 void compile(Tokens tokens, Program *program) {
   Parser parser = { tokens, 0 };
-  Procedure *proc = NULL;
   u32 static_segment_index = 0;
+
+  Procedure *proc = program_push_proc(program, STR_LIT("init"),
+                                      ValueKindUnit, (ProcParams) {0});
 
   while (parser_peek_token(&parser)) {
     Token *token = parser_expect_token(&parser, MASK(TT_NEWLINE) |
@@ -77,12 +79,14 @@ void compile(Tokens tokens, Program *program) {
                                                 MASK(TT_AT) |
                                                 MASK(TT_INCLUDE) |
                                                 MASK(TT_STATIC) |
-                                                MASK(TT_ASM));
+                                                MASK(TT_ASM) |
+                                                MASK(TT_INIT));
 
     if (token->id != TT_PROC &&
         token->id != TT_NEWLINE &&
         token->id != TT_INCLUDE &&
         token->id != TT_STATIC &&
+        token->id != TT_INIT &&
         proc == NULL) {
       ERROR("Every instruction should be inside of a procedure\n");
       exit(1);
@@ -203,7 +207,7 @@ void compile(Tokens tokens, Program *program) {
     } break;
 
     case TT_AT: {
-      compile_call(&parser, program, proc, token->lexeme, &static_segment_index);
+      compile_call(&parser, program, proc, (Str) {0}, &static_segment_index);
     } break;
 
     case TT_INCLUDE: {
@@ -238,6 +242,10 @@ void compile(Tokens tokens, Program *program) {
       proc_inline_asm(proc, text->lexeme, args, no_return);
     } break;
 
+    case TT_INIT: {
+      proc = program->procs;
+    } break;
+
     default: {
       ERROR("Unexpected token id\n");
       exit(1);
@@ -246,5 +254,11 @@ void compile(Tokens tokens, Program *program) {
 
     if (parser_peek_token(&parser))
       parser_expect_token(&parser, MASK(TT_NEWLINE));
+  }
+
+  if (program->procs->next) {
+    program->procs->instrs_end->next = program->procs->next->instrs;
+    program->procs->next->instrs = program->procs->instrs;
+    program->procs = program->procs->next;
   }
 }
