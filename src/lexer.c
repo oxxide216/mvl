@@ -77,8 +77,8 @@ void lex(Str text, Tokens *tokens, Str file_path) {
         if (text.ptr[i] == '\n') {
           ++row;
           col = 0;
-          text.ptr += i + 1;
-          text.len -= i + 1;
+          text.ptr += i;
+          text.len -= i;
           break;
         }
 
@@ -91,7 +91,7 @@ void lex(Str text, Tokens *tokens, Str file_path) {
       continue;
     }
 
-    if (token_id == TT_SKIP)
+    if (token_id == TT_WHITESPACE)
       continue;
 
     if (token_id == TT_STR_LIT) {

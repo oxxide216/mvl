@@ -2,22 +2,28 @@
 #include <ctype.h>
 
 #include "compiler.h"
+#include "../libs/mvm/misc.h"
 #include "../libs/lexgen-runtime/runtime.h"
 #include "../grammar.h"
 #include "shl_log.h"
 #include "parser.h"
 
-static Arg token_to_arg(Token *token, Program *program,
-                        u32 *static_segment_index) {
+typedef struct {
+  Program   *program;
+  Parser     parser;
+  u32        static_segments_count;
+} Compiler;
+
+static Arg token_to_arg(Token *token, Compiler *compiler) {
   if (token->id == TT_STR_LIT) {
     StringBuilder sb = {0};
     sb_push(&sb, "?s");
-    sb_push_u32(&sb, (*static_segment_index)++);
+    sb_push_u32(&sb, compiler->static_segments_count++);
 
     u8 *bytes = aalloc(sizeof(token->lexeme.len) + 1);
     memcpy(bytes, token->lexeme.ptr, token->lexeme.len);
     bytes[token->lexeme.len] = '\0';
-    program_push_static_segment(program, sb_to_str(sb),
+    program_push_static_segment(compiler->program, sb_to_str(sb),
                                 bytes, token->lexeme.len + 1);
 
     return arg_var(sb_to_str(sb));
@@ -34,25 +40,22 @@ static Arg token_to_arg(Token *token, Program *program,
   return str_to_arg(token->lexeme, arg_kind);
 }
 
-static Arg parser_parse_arg(Parser *parser, Program *program,
-                            u32 *static_segment_index) {
-  Token *arg = parser_expect_token(parser, MASK(TT_NUMBER) |
-                                           MASK(TT_IDENT) |
-                                           MASK(TT_STR_LIT) |
-                                           MASK(TT_CHAR_LIT));
+static Arg compile_arg(Compiler *compiler) {
+  Token *arg = parser_expect_token(&compiler->parser, MASK(TT_NUMBER) |
+                                                      MASK(TT_IDENT) |
+                                                      MASK(TT_STR_LIT) |
+                                                      MASK(TT_CHAR_LIT));
 
-  return token_to_arg(arg, program, static_segment_index);
+  return token_to_arg(arg, compiler);
 }
 
-static void compile_call(Parser *parser, Program *program,
-                         Procedure *proc, Str dest,
-                         u32 *static_segment_index) {
-  Token *callee = parser_expect_token(parser, MASK(TT_IDENT));
+static void compile_call(Compiler *compiler, Procedure *proc, Str dest) {
+  Token *callee = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
   Args args = {0};
 
-  while (parser_peek_token(parser) &&
-         parser_peek_token(parser)->id != TT_NEWLINE) {
-    Arg arg = parser_parse_arg(parser, program, static_segment_index);
+  while (parser_peek_token(&compiler->parser) &&
+         parser_peek_token(&compiler->parser)->id != TT_NEWLINE) {
+    Arg arg = compile_arg(compiler);
     args_push_arg(&args, arg);
   }
 
@@ -63,24 +66,25 @@ static void compile_call(Parser *parser, Program *program,
 }
 
 void compile(Tokens tokens, Program *program) {
-  Parser parser = { tokens, 0 };
-  u32 static_segment_index = 0;
+  Compiler compiler = {0};
+  compiler.program = program;
+  compiler.parser.tokens = tokens;
 
   Procedure *proc = program_push_proc(program, STR_LIT("init"),
                                       ValueKindUnit, (ProcParams) {0});
 
-  while (parser_peek_token(&parser)) {
-    Token *token = parser_expect_token(&parser, MASK(TT_NEWLINE) |
-                                                MASK(TT_PROC) |
-                                                MASK(TT_JUMP) |
-                                                MASK(TT_IF) |
-                                                MASK(TT_RET) |
-                                                MASK(TT_IDENT) |
-                                                MASK(TT_AT) |
-                                                MASK(TT_INCLUDE) |
-                                                MASK(TT_STATIC) |
-                                                MASK(TT_ASM) |
-                                                MASK(TT_INIT));
+  while (parser_peek_token(&compiler.parser)) {
+    Token *token = parser_expect_token(&compiler.parser, MASK(TT_NEWLINE) |
+                                                         MASK(TT_PROC) |
+                                                         MASK(TT_JUMP) |
+                                                         MASK(TT_IF) |
+                                                         MASK(TT_RET) |
+                                                         MASK(TT_IDENT) |
+                                                         MASK(TT_AT) |
+                                                         MASK(TT_INCLUDE) |
+                                                         MASK(TT_STATIC) |
+                                                         MASK(TT_ASM) |
+                                                         MASK(TT_INIT));
 
     if (token->id != TT_PROC &&
         token->id != TT_NEWLINE &&
@@ -98,15 +102,15 @@ void compile(Tokens tokens, Program *program) {
     }
 
     case TT_PROC: {
-      Token *name = parser_expect_token(&parser, MASK(TT_IDENT));
+      Token *name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
       ValueKind ret_val_kind = ValueKindUnit;
       ProcParams params = {0};
 
-      Token *next = parser_peek_token(&parser);
-      while (next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
-        Token *param_name = parser_expect_token(&parser, MASK(TT_IDENT));
-        parser_expect_token(&parser, MASK(TT_COLON));
-        Token *param_kind = parser_expect_token(&parser, MASK(TT_IDENT));
+      Token *next = parser_peek_token(&compiler.parser);
+      while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
+        Token *param_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        parser_expect_token(&compiler.parser, MASK(TT_COLON));
+        Token *param_kind = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
 
         ProcParam proc_param = {
           param_name->lexeme,
@@ -114,12 +118,12 @@ void compile(Tokens tokens, Program *program) {
         };
         DA_APPEND(params, proc_param);
 
-        next = parser_peek_token(&parser);
+        next = parser_peek_token(&compiler.parser);
       }
 
-      if (next->id == TT_RIGHT_ARROW) {
-        parser_next_token(&parser);
-        Token *ret_val_kind_token = parser_expect_token(&parser, MASK(TT_IDENT));
+      if (next && next->id == TT_RIGHT_ARROW) {
+        parser_next_token(&compiler.parser);
+        Token *ret_val_kind_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
         ret_val_kind = str_to_value(ret_val_kind_token->lexeme).kind;
       }
 
@@ -127,23 +131,22 @@ void compile(Tokens tokens, Program *program) {
     } break;
 
     case TT_JUMP: {
-      Token *label_name = parser_expect_token(&parser, MASK(TT_IDENT));
+      Token *label_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
       proc_jump(proc, label_name->lexeme);
     } break;
 
     case TT_IF: {
-      Arg arg0 = parser_parse_arg(&parser, program, &static_segment_index);
+      Arg arg0 = compile_arg(&compiler);
 
-      Token *op = parser_expect_token(&parser, MASK(TT_EQ) | MASK(TT_NE) |
-                                               MASK(TT_GT) | MASK(TT_LS) |
-                                               MASK(TT_GE) | MASK(TT_LE));
+      Token *op = parser_expect_token(&compiler.parser, MASK(TT_EQ) | MASK(TT_NE) |
+                                                        MASK(TT_GT) | MASK(TT_LS) |
+                                                        MASK(TT_GE) | MASK(TT_LE));
 
-      Arg arg1 = parser_parse_arg(&parser, program,
-                                  &static_segment_index);
+      Arg arg1 = compile_arg(&compiler);
 
-      parser_expect_token(&parser, MASK(TT_JUMP));
+      parser_expect_token(&compiler.parser, MASK(TT_JUMP));
 
-      Token *label_name = parser_expect_token(&parser, MASK(TT_IDENT));
+      Token *label_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
 
       RelOp rel_op;
 
@@ -165,77 +168,75 @@ void compile(Tokens tokens, Program *program) {
     } break;
 
     case TT_RET: {
-      if (parser_peek_token(&parser)->id == TT_NEWLINE) {
+      if (parser_peek_token(&compiler.parser)->id == TT_NEWLINE) {
         proc_return(proc);
       } else {
-        Arg arg = parser_parse_arg(&parser, program,
-                                   &static_segment_index);
+        Arg arg = compile_arg(&compiler);
         proc_return_value(proc, arg);
       }
     } break;
 
 
     case TT_IDENT: {
-      Token *next = parser_expect_token(&parser, MASK(TT_PUT) |
-                                                 MASK(TT_COLON));
+      Token *next = parser_expect_token(&compiler.parser, MASK(TT_PUT) |
+                                                          MASK(TT_COLON));
       if (next->id == TT_COLON) {
         proc_add_label(proc, token->lexeme);
         break;
       }
 
-      next = parser_expect_token(&parser, MASK(TT_IDENT) |
-                                          MASK(TT_NUMBER) |
-                                          MASK(TT_AT) |
-                                          MASK(TT_ALLOC) |
-                                          MASK(TT_STR_LIT) |
-                                          MASK(TT_CHAR_LIT));
+      next = parser_expect_token(&compiler.parser, MASK(TT_IDENT) |
+                                                   MASK(TT_NUMBER) |
+                                                   MASK(TT_AT) |
+                                                   MASK(TT_ALLOC) |
+                                                   MASK(TT_STR_LIT) |
+                                                   MASK(TT_CHAR_LIT));
 
       if (next->id == TT_AT) {
-        compile_call(&parser, program, proc,
-                     token->lexeme, &static_segment_index);
+        compile_call(&compiler, proc, token->lexeme);
         break;
       }
 
       if (next->id == TT_ALLOC) {
-        Token *size = parser_expect_token(&parser, MASK(TT_NUMBER));
+        Token *size = parser_expect_token(&compiler.parser, MASK(TT_NUMBER));
         proc_alloc(proc, token->lexeme, (u32) str_to_i32(size->lexeme));
         break;
       }
 
-      Arg arg = token_to_arg(next, program, &static_segment_index);
+      Arg arg = token_to_arg(next, &compiler);
       proc_assign(proc, token->lexeme, arg);
     } break;
 
     case TT_AT: {
-      compile_call(&parser, program, proc, (Str) {0}, &static_segment_index);
+      compile_call(&compiler, proc, (Str) {0});
     } break;
 
     case TT_INCLUDE: {
-      parser_expect_token(&parser, MASK(TT_STR_LIT));
+      parser_expect_token(&compiler.parser, MASK(TT_STR_LIT));
     } break;
 
     case TT_STATIC: {
-      Token *name = parser_expect_token(&parser, MASK(TT_IDENT));
-      parser_expect_token(&parser, MASK(TT_COLON));
-      Token *kind = parser_expect_token(&parser, MASK(TT_IDENT));
+      Token *name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+      parser_expect_token(&compiler.parser, MASK(TT_COLON));
+      Token *kind = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
 
       Value value = { str_to_value(kind->lexeme).kind, {0} };
       program_push_static_var(program, name->lexeme, value);
     } break;
 
     case TT_ASM: {
-      Token *text = parser_expect_token(&parser, MASK(TT_STR_LIT) |
-                                                 MASK(TT_NORET));
+      Token *text = parser_expect_token(&compiler.parser, MASK(TT_STR_LIT) |
+                                                          MASK(TT_NORET));
 
       bool no_return = text->id == TT_NORET;
 
       if (no_return)
-        text = parser_expect_token(&parser, MASK(TT_STR_LIT));
+        text = parser_expect_token(&compiler.parser, MASK(TT_STR_LIT));
 
       Args args = {0};
-      while (parser_peek_token(&parser) &&
-             parser_peek_token(&parser)->id != TT_NEWLINE) {
-        Arg arg = parser_parse_arg(&parser, program, &static_segment_index);
+      while (parser_peek_token(&compiler.parser) &&
+             parser_peek_token(&compiler.parser)->id != TT_NEWLINE) {
+        Arg arg = compile_arg(&compiler);
         args_push_arg(&args, arg);
       }
 
@@ -252,13 +253,15 @@ void compile(Tokens tokens, Program *program) {
     }
     }
 
-    if (parser_peek_token(&parser))
-      parser_expect_token(&parser, MASK(TT_NEWLINE));
+    if (parser_peek_token(&compiler.parser))
+      parser_expect_token(&compiler.parser, MASK(TT_NEWLINE));
   }
 
   if (program->procs->next) {
-    program->procs->instrs_end->next = program->procs->next->instrs;
-    program->procs->next->instrs = program->procs->instrs;
+    if (program->procs->instrs) {
+      program->procs->instrs_end->next = program->procs->next->instrs;
+      program->procs->next->instrs = program->procs->instrs;
+    }
     program->procs = program->procs->next;
   }
 }

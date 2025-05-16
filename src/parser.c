@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "parser.h"
+#include "../libs/mvm/misc.h"
 #include "../libs/lexgen-runtime/runtime.h"
 #include "../grammar.h"
 #include "shl_log.h"
@@ -19,6 +20,7 @@ static Str token_id_names[] = {
   STR_LIT("`asm`"),
   STR_LIT("`noret`"),
   STR_LIT("`init`"),
+  STR_LIT("`const`"),
   STR_LIT("identifier"),
   STR_LIT("number"),
   STR_LIT("`(`"),
@@ -52,22 +54,34 @@ Token *parser_next_token(Parser *parser) {
 }
 
 void print_id_mask(u32 id_mask, Str lexeme, FILE *stream) {
-  u32 print_or = false;
-  for (u32 i = 0; i < ARRAY_LEN(token_id_names); ++i) {
-    if (id_mask & MASK(i)) {
-      if (!print_or)
-        print_or = true;
-      else
-        fputs(" or ", stdout);
+  u32 len = ARRAY_LEN(token_id_names);
+  u32 max_matched_ids_count = 0;
 
-      if ((i == TT_NUMBER || i == TT_IDENT) && lexeme.len != 0) {
-        fputc('`', stream);
-        str_print(lexeme);
-        fputc('`', stream);
-      } else {
-        str_fprint(stream, token_id_names[i]);
-      }
+  for (u32 i = 0; i < len; ++i)
+    if (id_mask & MASK(i))
+      ++max_matched_ids_count;
+
+  u32 matched_ids_count = 0;
+  for (u32 i = 0; i < len; ++i) {
+    if (!(id_mask & MASK(i)))
+      continue;
+
+    if (max_matched_ids_count > 1) {
+      if (matched_ids_count + 1 == max_matched_ids_count)
+        fputs(" or ", stream);
+      else if (i > 0)
+        fputs(", ", stream);
     }
+
+    if ((i == TT_NUMBER || i == TT_IDENT) && lexeme.len != 0) {
+      fputc('`', stream);
+      str_print(lexeme);
+      fputc('`', stream);
+    } else {
+      str_fprint(stream, token_id_names[i]);
+    }
+
+    ++matched_ids_count;
   }
 }
 
@@ -105,32 +119,6 @@ ArgKind token_id_to_arg_kind(u32 id) {
 
   default: {
     ERROR("Wrong token id\n");
-    exit(1);
-  }
-  }
-}
-
-Value str_to_value(Str str) {
-  i32 number = 0;
-
-  for (u32 i = 0; i < (u32) str.len; ++i) {
-    number *= 10;
-    number += str.ptr[i] - '0';
-  }
-
-  return (Value) {
-    ValueKindS64,
-    { .s64 = number },
-  };
-}
-
-Arg str_to_arg(Str text, ArgKind kind) {
-  switch (kind) {
-  case ArgKindValue: return arg_value(str_to_value(text));
-  case ArgKindVar:   return arg_var(text);
-
-  default: {
-    ERROR("Wrong argument kind\n");
     exit(1);
   }
   }

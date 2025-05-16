@@ -1,5 +1,5 @@
 newline=\n
-skip=( |\t|\r)+
+whitespace=( |\t|\r)+
 comment=#
 
 proc=proc
