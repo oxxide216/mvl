@@ -1,0 +1,72 @@
+proc malloc size: s64 -> s64
+  size = @add size 8
+  ptr = @mmap size
+  @deref_put ptr size
+  ptr = @add ptr 8
+  ret ptr
+
+proc realloc ptr: s64 size: s64 -> s64
+  ptr = @sub ptr 8
+  size = @deref ptr
+
+  new_ptr = @malloc size
+  @memcopy new_ptr ptr size
+  @free ptr
+  ret new_ptr
+
+proc free ptr: s64
+  ptr = @sub ptr 8
+  size = @deref ptr
+  @munmap ptr size
+
+proc memcopy dest: s64 src: s64 size: s64
+  i = 0
+  byte = 0
+  dest_ptr = dest
+  src_ptr = src
+
+ body:
+  if i >= size jump end
+  byte = @deref_str src_ptr
+  @deref_put_str dest_ptr byte
+
+  dest_ptr = @add dest_ptr 1
+  src_ptr = @add src_ptr 1
+  i = @add i 1
+  jump body
+ end:
+
+proc memmove dest: s64 src: s64 size: s64
+  if dest < src jump next
+
+  i = @sub size 1
+  dest_ptr = @add dest i
+  src_ptr = @add src i
+
+ body0:
+  if i < 0 jump end
+  byte = @deref_str src_ptr
+  @deref_put_str dest_ptr byte
+
+  dest_ptr = @sub dest_ptr 1
+  src_ptr = @sub src_ptr 1
+  i = @sub i 1
+  jump body0
+
+ next:
+
+  i = 0
+  dest_ptr = dest
+  src_ptr = src
+
+ body1:
+  if i == size jump end
+  byte = @deref_str src_ptr
+  @deref_put_str dest_ptr byte
+
+  dest_ptr = @add dest_ptr 1
+  src_ptr = @add src_ptr 1
+  i = @add i 1
+  jump body1
+
+ end:

@@ -1,0 +1,26 @@
+proc exit code: s64
+  @exit code
+
+proc write fd: s64 str: s64 len: s64
+  @write fd str len
+
+proc read fd: s64 buf: s64 size: s64 -> s64
+  size = @read fd buf size
+  ret size
+
+proc mmap size: s64 -> s64
+  ptr = @mmap size
+  ret ptr
+
+proc munmap ptr: s64 size: s64
+  @munmap ptr size
+
+proc openat path: s64 -> s64
+  fd = @openat path
+  ret fd
+
+proc close fd: s64
+  @close fd
+
+proc fstat fd: s64 buf: s64
+  @fstat fd buf

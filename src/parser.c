@@ -69,13 +69,13 @@ void print_id_mask(u32 id_mask, Str lexeme, FILE *stream) {
     if (max_matched_ids_count > 1) {
       if (matched_ids_count + 1 == max_matched_ids_count)
         fputs(" or ", stream);
-      else if (i > 0)
+      else if (matched_ids_count > 0)
         fputs(", ", stream);
     }
 
     if ((i == TT_NUMBER || i == TT_IDENT) && lexeme.len != 0) {
       fputc('`', stream);
-      str_print(lexeme);
+      str_fprint(stream, lexeme);
       fputc('`', stream);
     } else {
       str_fprint(stream, token_id_names[i]);
@@ -89,7 +89,7 @@ void expect_token(Token *token, u32 id_mask) {
   if (!token) {
     ERROR("Expected ");
     print_id_mask(id_mask, (Str) {0}, stderr);
-    fputs(", but got EOF\n", stdout);
+    fputs(", but got EOF\n", stderr);
     exit(1);
   }
 

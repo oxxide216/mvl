@@ -1,0 +1,57 @@
+include "mem.mvl"
+include "str.mvl"
+
+proc println str: s64
+  call print str
+  call printl "\n" 1
+
+proc print str: s64
+  len = call strlen str
+  call printl str len
+
+proc printl str: s64 len: s64
+  @write 1 str len
+
+proc input -> s64
+  buf_cap = 1024
+  buf_size = 0
+  size_to_alloc = @add buf_cap 1
+  buf = call malloc size_to_alloc
+
+  EOF = @neg 1
+
+ body:
+  char = call inputc
+  if char == EOF jump next0
+
+  if buf_size < buf_cap jump next1
+  buf_cap = @mul buf_cap 2
+  buf = @realloc buf buf_cap
+ next1:
+
+  next_ptr = @add buf buf_size
+  @deref_put_str next_ptr char
+  buf_size = @add buf_size 1
+
+  if char == '\n' jump next0
+
+  jump body
+ next0:
+
+  ret buf
+
+proc inputc -> s64
+  char = 0
+
+  ref = @ref char
+  len = @inputl ref 1
+
+  if len == 0 jump eof
+  ret char
+ eof:
+  EOF = @neg 1
+  ret EOF
+
+proc inputl buf: s64 size: s64 -> s64
+  len = @read 0 buf size
+  ret len
