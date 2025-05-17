@@ -71,7 +71,7 @@
   do {                                           \
     type *new = SHL_DEFS_LL_ALLOC(sizeof(type)); \
     if (ll_end)                                  \
-      ll_end->next = new;                        \
+      (ll_end)->next = new;                      \
     else                                         \
       ll = new;                                  \
                                       \

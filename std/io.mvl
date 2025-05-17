@@ -1,13 +1,15 @@
 include "mem.mvl"
 include "str.mvl"
+include "unix.mvl"
+include "math.mvl"
 
 proc println str: s64
-  call print str
-  call printl "\n" 1
+  @print str
+  @printl "\n" 1
 
 proc print str: s64
-  len = call strlen str
-  call printl str len
+  len = @strlen str
+  @printl str len
 
 proc printl str: s64 len: s64
   @write 1 str len
@@ -16,12 +18,12 @@ proc input -> s64
   buf_cap = 1024
   buf_size = 0
   size_to_alloc = @add buf_cap 1
-  buf = call malloc size_to_alloc
+  buf = @malloc size_to_alloc
 
   EOF = @neg 1
 
  body:
-  char = call inputc
+  char = @inputc
   if char == EOF jump next0
 
   if buf_size < buf_cap jump next1
@@ -30,7 +32,7 @@ proc input -> s64
  next1:
 
   next_ptr = @add buf buf_size
-  @deref_put_str next_ptr char
+  @deref_put_char next_ptr char
   buf_size = @add buf_size 1
 
   if char == '\n' jump next0

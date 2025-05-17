@@ -1,0 +1,24 @@
+proc add a: s64 b: s64 -> s64
+  asm "add" a b
+  ret a
+
+proc sub a: s64 b: s64 -> s64
+  asm "add" a b
+  ret a
+
+proc mul a: s64 b: s64 -> s64
+  asm "mov rax," a
+  asm noret "imul" b
+
+proc div a: s64 b: s64 -> s64
+  asm "mov rax," a
+  asm noret "idiv" b
+
+proc mod a: s64 b: s64 -> s64
+  asm "mov rax," a
+  asm "idiv" b
+  asm "mov rax,rdx"
+
+proc neg num: s64 -> s64
+  asm "neg" num
+  ret num

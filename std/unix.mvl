@@ -1,26 +1,31 @@
 proc exit code: s64
-  @exit code
+  asm "mov rax,60"
+  asm "syscall"
 
 proc write fd: s64 str: s64 len: s64
-  @write fd str len
+  asm "mov rax,1"
+  asm "syscall"
 
 proc read fd: s64 buf: s64 size: s64 -> s64
-  size = @read fd buf size
-  ret size
+  asm "mov rax,0"
+  asm "syscall"
 
 proc mmap size: s64 -> s64
-  ptr = @mmap size
-  ret ptr
+  asm "mov rax,9"
+  asm "syscall"
 
 proc munmap ptr: s64 size: s64
-  @munmap ptr size
+  asm "mov rax,11"
+  asm "syscall"
 
 proc openat path: s64 -> s64
-  fd = @openat path
-  ret fd
+  asm "mov rax,257"
+  asm "syscall"
 
 proc close fd: s64
-  @close fd
+  asm "mov rax,3"
+  asm "syscall"
 
 proc fstat fd: s64 buf: s64
-  @fstat fd buf
+  asm "mov rax,5"
+  asm "syscall"

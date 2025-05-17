@@ -27,8 +27,8 @@ proc memcopy dest: s64 src: s64 size: s64
 
  body:
   if i >= size jump end
-  byte = @deref_str src_ptr
-  @deref_put_str dest_ptr byte
+  byte = @deref_char src_ptr
+  @deref_put_char dest_ptr byte
 
   dest_ptr = @add dest_ptr 1
   src_ptr = @add src_ptr 1
@@ -45,8 +45,8 @@ proc memmove dest: s64 src: s64 size: s64
 
  body0:
   if i < 0 jump end
-  byte = @deref_str src_ptr
-  @deref_put_str dest_ptr byte
+  byte = @deref_char src_ptr
+  @deref_put_char dest_ptr byte
 
   dest_ptr = @sub dest_ptr 1
   src_ptr = @sub src_ptr 1
@@ -61,8 +61,8 @@ proc memmove dest: s64 src: s64 size: s64
 
  body1:
   if i == size jump end
-  byte = @deref_str src_ptr
-  @deref_put_str dest_ptr byte
+  byte = @deref_char src_ptr
+  @deref_put_char dest_ptr byte
 
   dest_ptr = @add dest_ptr 1
   src_ptr = @add src_ptr 1
