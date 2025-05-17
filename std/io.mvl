@@ -15,7 +15,7 @@ proc printl str: s64 len: s64
   @write 1 str len
 
 proc input -> s64
-  buf_cap = 1024
+  buf_cap = 16
   buf_size = 0
   size_to_alloc = @add buf_cap 1
   buf = @malloc size_to_alloc
