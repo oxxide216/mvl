@@ -1,12 +1,13 @@
 newline=\n
 whitespace=( |\t|\r)+
 comment=#
+str_lit="
+char_lit='
 
 proc=proc
 jump=jump
 if=if
 ret=ret
-alloc=alloc
 include=include
 static=static
 asm=asm
@@ -29,5 +30,5 @@ gt=>
 ls=<
 put==
 right_arrow=\->
-str_lit="
-char_lit='
+ref=&
+deref=\*
