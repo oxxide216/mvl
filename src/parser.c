@@ -1,4 +1,5 @@
 #include <string.h>
+#include <ctype.h>
 
 #include "parser.h"
 #include "../libs/mvm/misc.h"
@@ -85,7 +86,7 @@ void print_id_mask(u32 id_mask, Str lexeme, FILE *stream) {
   }
 }
 
-void expect_token(Token *token, u32 id_mask) {
+void expect_token(Token *token, u64 id_mask) {
   if (!token) {
     ERROR("Expected ");
     print_id_mask(id_mask, (Str) {0}, stderr);
@@ -96,7 +97,7 @@ void expect_token(Token *token, u32 id_mask) {
   if (token && id_mask & (1 << token->id))
     return;
 
-  PERROR(STR_FMT":%u:%u: ", "expected ",
+  PERROR(STR_FMT":%u:%u: ", "Expected ",
          STR_ARG(token->file_path),
          token->row + 1, token->col + 1);
   print_id_mask(id_mask, (Str) {0}, stderr);
@@ -106,7 +107,7 @@ void expect_token(Token *token, u32 id_mask) {
   exit(1);
 }
 
-Token *parser_expect_token(Parser *parser, u32 id_mask) {
+Token *parser_expect_token(Parser *parser, u64 id_mask) {
   Token *token = parser_next_token(parser);
   expect_token(token, id_mask);
   return token;
@@ -114,8 +115,9 @@ Token *parser_expect_token(Parser *parser, u32 id_mask) {
 
 ArgKind token_id_to_arg_kind(u32 id) {
   switch (id) {
-  case TT_NUMBER: return ArgKindValue;
-  case TT_IDENT:  return ArgKindVar;
+  case TT_NUMBER:       return ArgKindValue;
+  case TT_NUMBER_TYPED: return ArgKindValue;
+  case TT_IDENT:        return ArgKindVar;
 
   default: {
     ERROR("Wrong token id\n");
@@ -124,40 +126,66 @@ ArgKind token_id_to_arg_kind(u32 id) {
   }
 }
 
-static Arg token_to_arg(Token *token, Program *program,
-                        u32 *static_segment_index) {
-  if (token->id == TT_STR_LIT) {
-    StringBuilder sb = {0};
-    sb_push(&sb, "?s");
-    sb_push_u32(&sb, (*static_segment_index)++);
+ValueKind str_to_value_kind(Str str) {
+  if (str_eq(str, STR_LIT("s64")))
+    return ValueKindS64;
 
-    u8 *bytes = aalloc(sizeof(token->lexeme.len) + 1);
-    memcpy(bytes, token->lexeme.ptr, token->lexeme.len);
-    bytes[token->lexeme.len] = '\0';
-    program_push_static_segment(program, sb_to_str(sb),
-                                bytes, token->lexeme.len + 1);
+  if (str_eq(str, STR_LIT("s32")))
+    return ValueKindS32;
 
-    return arg_var(sb_to_str(sb));
-  }
+  if (str_eq(str, STR_LIT("s16")))
+    return ValueKindS16;
 
-  if (token->id == TT_CHAR_LIT) {
-    return arg_value((Value) {
-      ValueKindS64,
-      { .s64 = token->lexeme.ptr[0] },
-    });
-  }
+  if (str_eq(str, STR_LIT("s8")))
+    return ValueKindS8;
 
-  ArgKind arg_kind = token_id_to_arg_kind(token->id);
-  return str_to_arg(token->lexeme, arg_kind);
+  ERROR("Unknown type name: "STR_FMT"\n", STR_ARG(str));
+  exit(1);
 }
 
+Value str_to_value(Str str) {
+  i64 number = 0;
+  u32 i = 0;
 
-Arg parser_parse_arg(Parser *parser, Program *program,
-                            u32 *static_segment_index) {
-  Token *arg = parser_expect_token(parser, MASK(TT_NUMBER) |
-                                           MASK(TT_IDENT) |
-                                           MASK(TT_STR_LIT) |
-                                           MASK(TT_CHAR_LIT));
+  while (i < (u32) str.len && isdigit(str.ptr[i])) {
+    number *= 10;
+    number += str.ptr[i] - '0';
+    ++i;
+  }
 
-  return token_to_arg(arg, program, static_segment_index);
+  if (i < (u32) str.len) {
+    str.ptr += i;
+    str.len -= i;
+
+    ValueKind kind = str_to_value_kind(str);
+
+    switch (kind) {
+    case ValueKindS64: return (Value) { kind, { .s64 = number } };
+    case ValueKindS32: return (Value) { kind, { .s32 = number } };
+    case ValueKindS16: return (Value) { kind, { .s16 = number } };
+    case ValueKindS8:  return (Value) { kind, { .s8 = number } };
+
+    default: {
+      ERROR("Unknown type name: "STR_FMT"\n", STR_ARG(str));
+      exit(1);
+    }
+    }
+  }
+
+  return (Value) {
+    ValueKindS64,
+    { .s64 = number },
+  };
+}
+
+Arg str_to_arg(Str text, ArgKind kind) {
+  switch (kind) {
+  case ArgKindValue: return arg_value(str_to_value(text));
+  case ArgKindVar:   return arg_var(text);
+
+  default: {
+    ERROR("Wrong argument kind\n");
+    exit(1);
+  }
+  }
 }

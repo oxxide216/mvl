@@ -43,6 +43,7 @@ static Arg token_to_arg(Token *token, Compiler *compiler) {
 static Arg compile_arg(Compiler *compiler) {
   Token *arg = parser_expect_token(&compiler->parser, MASK(TT_IDENT) |
                                                       MASK(TT_NUMBER) |
+                                                      MASK(TT_NUMBER_TYPED) |
                                                       MASK(TT_STR_LIT) |
                                                       MASK(TT_CHAR_LIT));
 
@@ -203,18 +204,15 @@ void compile(Tokens tokens, Program *program) {
 
       if (next && next->id == TT_DEREF) {
         parser_next_token(&compiler.parser);
+        Token *value_kind_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
         Token *ref_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-        proc_deref(proc, token->lexeme, ValueKindS64, ref_name->lexeme);
+
+        ValueKind kind = str_to_value_kind(value_kind_name->lexeme);
+        proc_deref(proc, token->lexeme, kind, ref_name->lexeme);
         break;
       }
 
-      next = parser_expect_token(&compiler.parser, MASK(TT_IDENT) |
-                                                   MASK(TT_NUMBER) |
-                                                   MASK(TT_AT) |
-                                                   MASK(TT_STR_LIT) |
-                                                   MASK(TT_CHAR_LIT));
-
-      Arg arg = token_to_arg(next, &compiler);
+      Arg arg = compile_arg(&compiler);
       proc_assign(proc, token->lexeme, arg);
     } break;
 

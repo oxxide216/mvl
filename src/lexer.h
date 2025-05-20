@@ -4,7 +4,7 @@
 #include "shl_defs.h"
 #include "shl_str.h"
 
-#define MASK(index) (1 << (index))
+#define MASK(index) ((u64) 1 << (index))
 
 typedef struct {
   Str lexeme;

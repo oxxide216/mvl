@@ -36,8 +36,12 @@ Str sb_to_str(StringBuilder sb);
 void sb_push(StringBuilder *sb, char *str);
 void sb_push_char(StringBuilder *sb, char ch);
 void sb_push_str(StringBuilder *sb, Str str);
+void sb_push_i8(StringBuilder *sb, char num);
+void sb_push_i16(StringBuilder *sb, short int num);
 void sb_push_i32(StringBuilder *sb, int num);
 void sb_push_i64(StringBuilder *sb, long int num);
+void sb_push_u8(StringBuilder *sb, unsigned char num);
+void sb_push_u16(StringBuilder *sb, unsigned short int num);
 void sb_push_u32(StringBuilder *sb, unsigned int num);
 void sb_push_u64(StringBuilder *sb, unsigned long int num);
 
@@ -167,6 +171,14 @@ void sb_push_str(StringBuilder *sb, Str str) {
   sb->len += str.len;
 }
 
+void sb_push_i8(StringBuilder *sb, char num) {
+  sb_push_i64(sb, num);
+}
+
+void sb_push_i16(StringBuilder *sb, short int num) {
+  sb_push_i64(sb, num);
+}
+
 void sb_push_i32(StringBuilder *sb, int num) {
   sb_push_i64(sb, num);
 }
@@ -183,6 +195,14 @@ void sb_push_i64(StringBuilder *sb, long int num) {
   sb_reserve_space(sb, len);
   snprintf(sb->buffer + sb->len, len + 1, "%ld", num);
   sb->len += len;
+}
+
+void sb_push_u8(StringBuilder *sb, unsigned char num) {
+  sb_push_u64(sb, num);
+}
+
+void sb_push_u16(StringBuilder *sb, unsigned short int num) {
+  sb_push_u64(sb, num);
 }
 
 void sb_push_u32(StringBuilder *sb, unsigned int num) {
