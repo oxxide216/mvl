@@ -32,7 +32,7 @@ proc input -> s64
  next1:
 
   next_ptr = @add buf buf_size
-  @deref_put_char next_ptr char
+  *next_ptr = char
   buf_size = @add buf_size 1
 
   if char == '\n' jump next0
@@ -42,16 +42,16 @@ proc input -> s64
 
   ret buf
 
-proc inputc -> s64
-  char = 0
+proc inputc -> s8
+  char = 0s8
 
-  ref = @ref char
+  ref = &char
   len = @inputl ref 1
 
   if len == 0 jump eof
   ret char
  eof:
-  EOF = @neg 1
+  EOF = @neg_s8 1s8
   ret EOF
 
 proc inputl buf: s64 size: s64 -> s64

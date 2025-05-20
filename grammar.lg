@@ -13,6 +13,7 @@ static=static
 asm=asm
 noret=noret
 init=init
+cast=cast
 
 ident=(a-z|A-Z|_)(a-z|A-Z|0-9|_)*
 number=0-9+

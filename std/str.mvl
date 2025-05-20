@@ -1,17 +1,17 @@
 include "mem.mvl"
 
 proc strlen str: s64 -> s64
-  ptr = str
+  i = 0
 
  body:
-  char = @deref_char ptr
-  if char == 0 jump next
-  ptr = @add ptr 1
+  ptr = @add str i
+  char = *s8 ptr
+  if char == 0s8 jump next
+  i = @add i 1
   jump body
  next:
 
-  len = @sub ptr str
-  ret len
+  ret i
 
 proc s64_to_str num: s64 -> s64
   buf_size = 1
@@ -31,7 +31,8 @@ proc s64_to_str num: s64 -> s64
 
   digit = @mod num 10
   digit = @add digit '0'
-  @deref_put_char buf digit
+  digit_char = cast s8 digit
+  *buf = digit_char
 
   num = @div num 10
   len = @add len 1
@@ -39,7 +40,7 @@ proc s64_to_str num: s64 -> s64
   if num > 0 jump body
 
   ptr = @add buf len
-  @deref_put_char ptr 0
+  *ptr = 0s8
 
   ret buf
 
@@ -49,16 +50,17 @@ proc str_to_s64 str: s64 -> s64
 
  body:
   ptr = @add str i
-  char = @deref_char ptr
+  char = *s8 ptr
   if char == '\0' jump end
   if char < '0' jump next
   if char > '9' jump next
 
   ptr = @add str i
-  digit = @sub char '0'
+  digit = @sub_s8 char 0s8
+  digit_s64 = cast s64 digit
 
   num = @mul num 10
-  num = @add num digit
+  num = @add num digit_s64
 
  next:
   i = @add i 1

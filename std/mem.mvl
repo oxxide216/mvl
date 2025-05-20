@@ -1,13 +1,13 @@
 proc malloc size: s64 -> s64
   size = @add size 8
   ptr = @mmap size
-  @deref_put ptr size
+  *ptr = size
   ptr = @add ptr 8
   ret ptr
 
 proc realloc ptr: s64 size: s64 -> s64
   ptr = @sub ptr 8
-  size = @deref ptr
+  size = *s64 ptr
 
   new_ptr = @malloc size
   @memcopy new_ptr ptr size
@@ -16,19 +16,19 @@ proc realloc ptr: s64 size: s64 -> s64
 
 proc free ptr: s64
   ptr = @sub ptr 8
-  size = @deref ptr
+  size = *s64 ptr
   @munmap ptr size
 
 proc memcopy dest: s64 src: s64 size: s64
   i = 0
-  byte = 0
+  byte = 0s8
   dest_ptr = dest
   src_ptr = src
 
  body:
   if i >= size jump end
-  byte = @deref_char src_ptr
-  @deref_put_char dest_ptr byte
+  byte = *s8 src_ptr
+  *dest_ptr = byte
 
   dest_ptr = @add dest_ptr 1
   src_ptr = @add src_ptr 1
@@ -45,8 +45,8 @@ proc memmove dest: s64 src: s64 size: s64
 
  body0:
   if i < 0 jump end
-  byte = @deref_char src_ptr
-  @deref_put_char dest_ptr byte
+  byte = *s8 src_ptr
+  *dest_ptr = byte
 
   dest_ptr = @sub dest_ptr 1
   src_ptr = @sub src_ptr 1
@@ -61,8 +61,8 @@ proc memmove dest: s64 src: s64 size: s64
 
  body1:
   if i == size jump end
-  byte = @deref_char src_ptr
-  @deref_put_char dest_ptr byte
+  byte = *s8 src_ptr
+  *dest_ptr = byte
 
   dest_ptr = @add dest_ptr 1
   src_ptr = @add src_ptr 1

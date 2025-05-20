@@ -191,6 +191,7 @@ void compile(Tokens tokens, Program *program) {
       next = parser_peek_token(&compiler.parser);
 
       if (next && next->id == TT_AT) {
+        parser_next_token(&compiler.parser);
         compile_call(&compiler, proc, token->lexeme);
         break;
       }
@@ -209,6 +210,16 @@ void compile(Tokens tokens, Program *program) {
 
         ValueKind kind = str_to_value_kind(value_kind_name->lexeme);
         proc_deref(proc, token->lexeme, kind, ref_name->lexeme);
+        break;
+      }
+
+      if (next && next->id == TT_CAST) {
+        parser_next_token(&compiler.parser);
+        Token *value_kind_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        Token *var_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+
+        ValueKind kind = str_to_value_kind(value_kind_name->lexeme);
+        proc_cast(proc, token->lexeme, kind, var_name->lexeme);
         break;
       }
 
