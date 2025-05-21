@@ -147,13 +147,22 @@ ValueKind str_to_value_kind(Str str) {
 
 Value str_to_value(Str str) {
   i64 number = 0;
+  bool is_neg = false;
   u32 i = 0;
+
+  if (str.len > 0 && str.ptr[0] == '-') {
+    is_neg = true;
+    ++i;
+  }
 
   while (i < (u32) str.len && isdigit(str.ptr[i])) {
     number *= 10;
     number += str.ptr[i] - '0';
     ++i;
   }
+
+  if (is_neg)
+    number *= -1;
 
   if (i < (u32) str.len) {
     str.ptr += i;

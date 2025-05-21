@@ -7,7 +7,7 @@ static MAP_SHARED = 1
 static MAP_PRIVATE = 2
 static MAP_ANONYMOUS = 32
 
-static AT_FDCWD = 0
+static AT_FDCWD = -100
 
 static O_RDONLY = 0
 static O_WRONLY = 1
@@ -29,9 +29,6 @@ static S_IRWXO = 7
 static S_IROTH = 4
 static S_IWOTH = 2
 static S_IXOTH = 1
-
-init
-  AT_FDCWD = @neg 100
 
 proc exit code: s64
   asm "mov rax,60"
