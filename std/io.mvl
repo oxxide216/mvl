@@ -7,14 +7,29 @@ proc println str: s64
   @print str
   @printl "\n" 1
 
+proc println fd: s64 str: s64
+  @print fd str
+  @printl fd "\n" 1
+
 proc print str: s64
   len = @strlen str
   @printl str len
 
+proc print fd: s64 str: s64
+  len = @strlen str
+  @printl fd str len
+
 proc printl str: s64 len: s64
   @write 1 str len
 
+proc printl fd: s64 str: s64 len: s64
+  @write fd str len
+
 proc input -> s64
+  t = @input 0
+  ret t
+
+proc input fd: s64 -> s64
   buf_cap = 16
   buf_size = 0
   size_to_alloc = @add buf_cap 1
@@ -23,7 +38,7 @@ proc input -> s64
   EOF = @neg 1
 
  body:
-  char = @inputc
+  char = @inputc fd
   if char == EOF jump next0
 
   if buf_size < buf_cap jump next1
@@ -43,10 +58,14 @@ proc input -> s64
   ret buf
 
 proc inputc -> s8
+  t = @inputc 0
+  ret t
+
+proc inputc fd: s64 -> s8
   char = 0s8
 
   ref = &char
-  len = @inputl ref 1
+  len = @inputl fd ref 1
 
   if len == 0 jump eof
   ret char
@@ -57,3 +76,14 @@ proc inputc -> s8
 proc inputl buf: s64 size: s64 -> s64
   len = @read 0 buf size
   ret len
+
+proc inputl fd: s64 buf: s64 size: s64 -> s64
+  len = @read fd buf size
+  ret len
+
+proc open path: s64 -> s64
+  flags = @or O_RDWR O_CREAT
+  flags = @or flags O_TRUNC
+  mode = @or S_IRUSR S_IWUSR
+  t = @openat AT_FDCWD path flags mode
+  ret t

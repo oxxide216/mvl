@@ -1,6 +1,13 @@
+include "str.mvl"
+
 proc malloc size: s64 -> s64
   size = @add size 8
-  ptr = @mmap size
+  prot = @or PROT_READ PROT_WRITE
+  flags = @or MAP_PRIVATE MAP_ANONYMOUS
+  fildes = @neg 1
+
+  ptr = @mmap 0 size prot flags fildes 0
+
   *ptr = size
   ptr = @add ptr 8
   ret ptr
@@ -48,9 +55,9 @@ proc memmove dest: s64 src: s64 size: s64
   byte = *s8 src_ptr
   *dest_ptr = byte
 
+  i = @sub i 1
   dest_ptr = @sub dest_ptr 1
   src_ptr = @sub src_ptr 1
-  i = @sub i 1
   jump body0
 
  next:

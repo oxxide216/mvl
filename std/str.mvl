@@ -20,7 +20,7 @@ proc s64_to_str num: s64 -> s64
   len = 0
 
  body:
-  if len < buf_size jump next
+  if buf_size < len jump next
   buf_size = @mul buf_size 2
   size_to_alloc = @add buf_size 1
   @realloc buf size_to_alloc

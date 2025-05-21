@@ -133,8 +133,8 @@ static Arg token_to_arg(Token *token, Compiler *compiler) {
     u8 *bytes = aalloc(sizeof(token->lexeme.len) + 1);
     memcpy(bytes, token->lexeme.ptr, token->lexeme.len);
     bytes[token->lexeme.len] = '\0';
-    program_push_static_segment(compiler->program, name,
-                                bytes, token->lexeme.len + 1);
+    program_push_static_segment(compiler->program, name, bytes,
+                                token->lexeme.len + 1, true);
 
     VariableKind var_kind = { name, ValueKindS64 };
     DA_APPEND(compiler->var_kinds.kinds, var_kind);
@@ -256,10 +256,11 @@ void collect_procs_and_static_vars(Compiler *compiler) {
       define_proc(compiler, name_token->lexeme, ret_val_kind, param_kinds);
     } else if (token->id == TT_STATIC) {
       Token *name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
-      parser_expect_token(&compiler->parser, MASK(TT_COLON));
-      Token *kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+      parser_expect_token(&compiler->parser, MASK(TT_PUT));
+      Token *value_token = parser_expect_token(&compiler->parser, MASK(TT_NUMBER) |
+                                                                  MASK(TT_NUMBER_TYPED));
 
-      ValueKind value_kind = str_to_value(kind_token->lexeme).kind;
+      ValueKind value_kind = str_to_value(value_token->lexeme).kind;
       VariableKind var_kind = { name_token->lexeme, value_kind };
       DA_APPEND(compiler->var_kinds.static_kinds, var_kind);
     }
@@ -469,13 +470,12 @@ void compile(Tokens tokens, Program *program) {
 
     case TT_STATIC: {
       Token *name_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-      parser_expect_token(&compiler.parser, MASK(TT_COLON));
-      Token *kind_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+      parser_expect_token(&compiler.parser, MASK(TT_PUT));
+      Token *value_token = parser_expect_token(&compiler.parser, MASK(TT_NUMBER) |
+                                                                 MASK(TT_NUMBER_TYPED));
 
-      ValueKind value_kind = str_to_value(kind_token->lexeme).kind;
-
-      Value value = { value_kind, {0} };
-      program_push_static_var(program, name_token->lexeme, value);
+      Value value = str_to_value(value_token->lexeme);
+      program_push_static_var(program, name_token->lexeme, value, false);
     } break;
 
     case TT_ASM: {

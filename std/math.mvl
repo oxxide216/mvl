@@ -16,19 +16,19 @@ proc add a: s8 b: s8 -> s8
 
 
 proc sub a: s64 b: s64 -> s64
-  asm "add @,@" a b
+  asm "sub @,@" a b
   ret a
 
 proc sub a: s32 b: s32 -> s32
-  asm "add @,@" a b
+  asm "sub @,@" a b
   ret a
 
 proc sub a: s16 b: s16 -> s16
-  asm "add @,@" a b
+  asm "sub @,@" a b
   ret a
 
 proc sub a: s8 b: s8 -> s8
-  asm "add @,@" a b
+  asm "sub @,@" a b
   ret a
 
 
@@ -50,39 +50,47 @@ proc mul a: s8 b: s8 -> s8
 
 
 proc div a: s64 b: s64 -> s64
+  asm "cdq"
   asm "mov rax,@" a
   asm noret "idiv @" b
 
 proc div a: s32 b: s32 -> s32
+  asm "cdq"
   asm "mov rax,@" a
   asm noret "idiv @" b
 
 proc div a: s16 b: s16 -> s16
+  asm "cdq"
   asm "mov rax,@" a
   asm noret "idiv @" b
 
 proc div a: s8 b: s8 -> s8
+  asm "cdq"
   asm "mov rax,@" a
   asm noret "idiv @" b
 
 
 proc mod a: s64 b: s64 -> s64
-  asm "mov rax," a
+  asm "mov rax,@" a
+  asm "cdq"
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
 proc mod a: s32 b: s32 -> s32
-  asm "mov rax," a
+  asm "mov rax,@" a
+  asm "cdq"
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
 proc mod a: s16 b: s16 -> s16
-  asm "mov rax," a
+  asm "mov rax,@" a
+  asm "cdq"
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
 proc mod a: s8 b: s8 -> s8
-  asm "mov rax," a
+  asm "mov rax,@" a
+  asm "cdq"
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
@@ -102,3 +110,56 @@ proc neg num: s16 -> s16
 proc neg num: s8 -> s8
   asm "neg @" num
   ret num
+
+
+
+proc or a: s64 b: s64 -> s64
+  asm "or @,@" a b
+  ret a
+
+proc or a: s32 b: s32 -> s32
+  asm "or @,@" a b
+  ret a
+
+proc or a: s16 b: s16 -> s16
+  asm "or @,@" a b
+  ret a
+
+proc or a: s8 b: s8 -> s8
+  asm "or @,@" a b
+  ret a
+
+
+proc and a: s64 b: s64 -> s64
+  asm "and @,@" a b
+  ret a
+
+proc and a: s32 b: s32 -> s32
+  asm "and @,@" a b
+  ret a
+
+proc and a: s16 b: s16 -> s16
+  asm "and @,@" a b
+  ret a
+
+proc and a: s8 b: s8 -> s8
+  asm "and @,@" a b
+  ret a
+
+
+proc xor a: s64 b: s64 -> s64
+  asm "xor @,@" a b
+  ret a
+
+proc xor a: s32 b: s32 -> s32
+  asm "xor @,@" a b
+  ret a
+
+proc xor a: s16 b: s16 -> s16
+  asm "xor @,@" a b
+  ret a
+
+proc xor a: s8 b: s8 -> s8
+  asm "xor @,@" a b
+  ret a
+

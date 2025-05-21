@@ -1,3 +1,38 @@
+static PROT_READ = 1
+static PROT_WRITE = 2
+static PROT_EXEC = 4
+static PROT_NONE = 0
+
+static MAP_SHARED = 1
+static MAP_PRIVATE = 2
+static MAP_ANONYMOUS = 32
+
+static AT_FDCWD = 0
+
+static O_RDONLY = 0
+static O_WRONLY = 1
+static O_RDWR = 2
+static O_CREAT = 64
+static O_TRUNC = 512
+
+static S_IRWXU = 448
+static S_IRUSR = 256
+static S_IWUSR = 128
+static S_IXUSR = 64
+
+static S_IRWXG = 56
+static S_IRGRP = 32
+static S_IWGRP = 16
+static S_IXGRP = 8
+
+static S_IRWXO = 7
+static S_IROTH = 4
+static S_IWOTH = 2
+static S_IXOTH = 1
+
+init
+  AT_FDCWD = @neg 100
+
 proc exit code: s64
   asm "mov rax,60"
   asm "syscall"
@@ -10,7 +45,8 @@ proc read fd: s64 buf: s64 size: s64 -> s64
   asm "mov rax,0"
   asm noret "syscall"
 
-proc mmap size: s64 -> s64
+proc mmap addr: s64 len: s64 prot: s64 flags: s64 fildes: s64 off: s64 -> s64
+  asm "mov r10,rcx"
   asm "mov rax,9"
   asm noret "syscall"
 
@@ -18,7 +54,8 @@ proc munmap ptr: s64 size: s64
   asm "mov rax,11"
   asm "syscall"
 
-proc openat path: s64 -> s64
+proc openat dirfd: s64 pathname: s64 flags: s64 mode: s64 -> s64
+  asm "mov r10,rcx"
   asm "mov rax,257"
   asm noret "syscall"
 
