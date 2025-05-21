@@ -35,7 +35,7 @@ proc input fd: s64 -> s64
   size_to_alloc = @add buf_cap 1
   buf = @malloc size_to_alloc
 
-  EOF = @neg 1
+  EOF = @neg 1s8
 
  body:
   char = @inputc fd
@@ -43,14 +43,15 @@ proc input fd: s64 -> s64
 
   if buf_size < buf_cap jump next1
   buf_cap = @mul buf_cap 2
-  buf = @realloc buf buf_cap
+  size_to_alloc = @add buf_cap 1
+  buf = @realloc buf size_to_alloc
  next1:
 
   next_ptr = @add buf buf_size
   *next_ptr = char
   buf_size = @add buf_size 1
 
-  if char == '\n' jump next0
+  if char == '\n's8 jump next0
 
   jump body
  next0:

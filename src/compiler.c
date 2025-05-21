@@ -143,6 +143,47 @@ static Arg token_to_arg(Token *token, Compiler *compiler) {
   }
 
   if (token->id == TT_CHAR_LIT) {
+    Token *next = parser_peek_token(&compiler->parser);
+    if (next && next->id == TT_IDENT) {
+      parser_next_token(&compiler->parser);
+      ValueKind kind = str_to_value_kind(next->lexeme);
+
+      switch (kind) {
+      case ValueKindS64: {
+        return arg_value((Value) {
+          ValueKindS64,
+          { .s64 = token->lexeme.ptr[0] },
+        });
+      }
+
+      case ValueKindS32: {
+        return arg_value((Value) {
+          ValueKindS32,
+          { .s32 = token->lexeme.ptr[0] },
+        });
+      }
+
+      case ValueKindS16: {
+        return arg_value((Value) {
+          ValueKindS16,
+          { .s16 = token->lexeme.ptr[0] },
+        });
+      }
+
+      case ValueKindS8: {
+        return arg_value((Value) {
+          ValueKindS8,
+          { .s8 = token->lexeme.ptr[0] },
+        });
+      }
+
+      default: {
+        ERROR("Wrong value kind for character literal\n");
+        exit(1);
+      }
+      }
+    }
+
     return arg_value((Value) {
       ValueKindS64,
       { .s64 = token->lexeme.ptr[0] },

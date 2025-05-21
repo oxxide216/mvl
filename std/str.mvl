@@ -51,9 +51,9 @@ proc str_to_s64 str: s64 -> s64
  body:
   ptr = @add str i
   char = *s8 ptr
-  if char == '\0' jump end
-  if char < '0' jump next
-  if char > '9' jump next
+  if char == '\0's8 jump end
+  if char < '0's8 jump next
+  if char > '9's8 jump next
 
   ptr = @add str i
   digit = @sub char 0s8
