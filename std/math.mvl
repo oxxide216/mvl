@@ -2,35 +2,103 @@ proc add a: s64 b: s64 -> s64
   asm "add @,@" a b
   ret a
 
+proc add a: s32 b: s32 -> s32
+  asm "add @,@" a b
+  ret a
+
+proc add a: s16 b: s16 -> s16
+  asm "add @,@" a b
+  ret a
+
+proc add a: s8 b: s8 -> s8
+  asm "add @,@" a b
+  ret a
+
+
 proc sub a: s64 b: s64 -> s64
   asm "add @,@" a b
   ret a
+
+proc sub a: s32 b: s32 -> s32
+  asm "add @,@" a b
+  ret a
+
+proc sub a: s16 b: s16 -> s16
+  asm "add @,@" a b
+  ret a
+
+proc sub a: s8 b: s8 -> s8
+  asm "add @,@" a b
+  ret a
+
 
 proc mul a: s64 b: s64 -> s64
   asm "mov rax,@" a
   asm noret "imul @" b
 
+proc mul a: s32 b: s32 -> s32
+  asm "mov rax,@" a
+  asm noret "imul @" b
+
+proc mul a: s16 b: s16 -> s16
+  asm "mov rax,@" a
+  asm noret "imul @" b
+
+proc mul a: s8 b: s8 -> s8
+  asm "mov rax,@" a
+  asm noret "imul @" b
+
+
 proc div a: s64 b: s64 -> s64
   asm "mov rax,@" a
   asm noret "idiv @" b
+
+proc div a: s32 b: s32 -> s32
+  asm "mov rax,@" a
+  asm noret "idiv @" b
+
+proc div a: s16 b: s16 -> s16
+  asm "mov rax,@" a
+  asm noret "idiv @" b
+
+proc div a: s8 b: s8 -> s8
+  asm "mov rax,@" a
+  asm noret "idiv @" b
+
 
 proc mod a: s64 b: s64 -> s64
   asm "mov rax," a
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
+proc mod a: s32 b: s32 -> s32
+  asm "mov rax," a
+  asm "idiv @" b
+  asm noret "mov rax,rdx"
+
+proc mod a: s16 b: s16 -> s16
+  asm "mov rax," a
+  asm "idiv @" b
+  asm noret "mov rax,rdx"
+
+proc mod a: s8 b: s8 -> s8
+  asm "mov rax," a
+  asm "idiv @" b
+  asm noret "mov rax,rdx"
+
+
 proc neg num: s64 -> s64
   asm "neg @" num
   ret num
 
-proc add_s8 a: s8 b: s8 -> s8
-  asm "add @,@" a b
-  ret a
+proc neg num: s32 -> s32
+  asm "neg @" num
+  ret num
 
-proc sub_s8 a: s8 b: s8 -> s8
-  asm "add @,@" a b
-  ret a
+proc neg num: s16 -> s16
+  asm "neg @" num
+  ret num
 
-proc neg_s8 num: s8 -> s8
+proc neg num: s8 -> s8
   asm "neg @" num
   ret num

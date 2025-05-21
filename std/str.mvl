@@ -56,7 +56,7 @@ proc str_to_s64 str: s64 -> s64
   if char > '9' jump next
 
   ptr = @add str i
-  digit = @sub_s8 char 0s8
+  digit = @sub char 0s8
   digit_s64 = cast s64 digit
 
   num = @mul num 10
