@@ -141,11 +141,23 @@ ValueKind str_to_value_kind(Str str) {
   if (str_eq(str, STR_LIT("s8")))
     return ValueKindS8;
 
+  if (str_eq(str, STR_LIT("u64")))
+    return ValueKindU64;
+
+  if (str_eq(str, STR_LIT("u32")))
+    return ValueKindU32;
+
+  if (str_eq(str, STR_LIT("u16")))
+    return ValueKindU16;
+
+  if (str_eq(str, STR_LIT("u8")))
+    return ValueKindU8;
+
   ERROR("Unknown type name: "STR_FMT"\n", STR_ARG(str));
   exit(1);
 }
 
-Value str_to_value(Str str) {
+Value str_to_number_value(Str str) {
   i64 number = 0;
   bool is_neg = false;
   u32 i = 0;
@@ -175,6 +187,10 @@ Value str_to_value(Str str) {
     case ValueKindS32: return (Value) { kind, { .s32 = number } };
     case ValueKindS16: return (Value) { kind, { .s16 = number } };
     case ValueKindS8:  return (Value) { kind, { .s8 = number } };
+    case ValueKindU64: return (Value) { kind, { .u64 = number } };
+    case ValueKindU32: return (Value) { kind, { .u32 = number } };
+    case ValueKindU16: return (Value) { kind, { .u16 = number } };
+    case ValueKindU8:  return (Value) { kind, { .u8 = number } };
 
     default: {
       ERROR("Unknown type name: "STR_FMT"\n", STR_ARG(str));
@@ -191,7 +207,7 @@ Value str_to_value(Str str) {
 
 Arg str_to_arg(Str text, ArgKind kind) {
   switch (kind) {
-  case ArgKindValue: return arg_value(str_to_value(text));
+  case ArgKindValue: return arg_value(str_to_number_value(text));
   case ArgKindVar:   return arg_var(text);
 
   default: {

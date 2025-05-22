@@ -43,6 +43,10 @@ static Str value_kind_to_str(ValueKind kind) {
   case ValueKindS32:  return STR_LIT("s32");
   case ValueKindS16:  return STR_LIT("s16");
   case ValueKindS8:   return STR_LIT("s8");
+  case ValueKindU64:  return STR_LIT("u64");
+  case ValueKindU32:  return STR_LIT("u32");
+  case ValueKindU16:  return STR_LIT("u16");
+  case ValueKindU8:   return STR_LIT("u8");
 
   default: {
     ERROR("Wrong value kind\n");
@@ -134,59 +138,18 @@ static Arg token_to_arg(Token *token, Compiler *compiler) {
     memcpy(bytes, token->lexeme.ptr, token->lexeme.len);
     bytes[token->lexeme.len] = '\0';
     program_push_static_segment(compiler->program, name, bytes,
-                                token->lexeme.len + 1, true);
+                                token->lexeme.len + 1);
 
-    VariableKind var_kind = { name, ValueKindS64 };
+    VariableKind var_kind = { name, ValueKindU64 };
     DA_APPEND(compiler->var_kinds.kinds, var_kind);
 
     return arg_var(name);
   }
 
   if (token->id == TT_CHAR_LIT) {
-    Token *next = parser_peek_token(&compiler->parser);
-    if (next && next->id == TT_IDENT) {
-      parser_next_token(&compiler->parser);
-      ValueKind kind = str_to_value_kind(next->lexeme);
-
-      switch (kind) {
-      case ValueKindS64: {
-        return arg_value((Value) {
-          ValueKindS64,
-          { .s64 = token->lexeme.ptr[0] },
-        });
-      }
-
-      case ValueKindS32: {
-        return arg_value((Value) {
-          ValueKindS32,
-          { .s32 = token->lexeme.ptr[0] },
-        });
-      }
-
-      case ValueKindS16: {
-        return arg_value((Value) {
-          ValueKindS16,
-          { .s16 = token->lexeme.ptr[0] },
-        });
-      }
-
-      case ValueKindS8: {
-        return arg_value((Value) {
-          ValueKindS8,
-          { .s8 = token->lexeme.ptr[0] },
-        });
-      }
-
-      default: {
-        ERROR("Wrong value kind for character literal\n");
-        exit(1);
-      }
-      }
-    }
-
     return arg_value((Value) {
-      ValueKindS64,
-      { .s64 = token->lexeme.ptr[0] },
+      ValueKindU64,
+      { .u64 = token->lexeme.ptr[0] },
     });
   }
 
@@ -265,7 +228,7 @@ static void compile_call(Compiler *compiler, Str dest,
   }
 }
 
-void collect_procs_and_static_vars(Compiler *compiler) {
+void collect_defs(Compiler *compiler) {
   define_proc(compiler, STR_LIT("init"), ValueKindUnit, (ParamKinds) {0});
 
   while (parser_peek_token(&compiler->parser)) {
@@ -301,7 +264,7 @@ void collect_procs_and_static_vars(Compiler *compiler) {
       Token *value_token = parser_expect_token(&compiler->parser, MASK(TT_NUMBER) |
                                                                   MASK(TT_NUMBER_TYPED));
 
-      ValueKind value_kind = str_to_value(value_token->lexeme).kind;
+      ValueKind value_kind = str_to_number_value(value_token->lexeme).kind;
       VariableKind var_kind = { name_token->lexeme, value_kind };
       DA_APPEND(compiler->var_kinds.static_kinds, var_kind);
     }
@@ -321,7 +284,7 @@ void compile(Tokens tokens, Program *program) {
   u32 current_proc_id = define_proc(&compiler, STR_LIT("@init"),
                                     ValueKindUnit, (ParamKinds) {0});
 
-  collect_procs_and_static_vars(&compiler);
+  collect_defs(&compiler);
 
   while (parser_peek_token(&compiler.parser)) {
     Token *token = parser_expect_token(&compiler.parser, MASK(TT_NEWLINE) |
@@ -455,7 +418,7 @@ void compile(Tokens tokens, Program *program) {
       }
 
       if (next && next->id == TT_REF) {
-        VariableKind var_kind = { token->lexeme, ValueKindS64 };
+        VariableKind var_kind = { token->lexeme, ValueKindU64 };
         DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
         parser_next_token(&compiler.parser);
@@ -515,7 +478,7 @@ void compile(Tokens tokens, Program *program) {
       Token *value_token = parser_expect_token(&compiler.parser, MASK(TT_NUMBER) |
                                                                  MASK(TT_NUMBER_TYPED));
 
-      Value value = str_to_value(value_token->lexeme);
+      Value value = str_to_number_value(value_token->lexeme);
       program_push_static_var(program, name_token->lexeme, value, false);
     } break;
 

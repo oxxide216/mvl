@@ -14,6 +14,22 @@ proc add a: s8 b: s8 -> s8
   asm "add @,@" a b
   ret a
 
+proc add a: u64 b: u64 -> u64
+  asm "add @,@" a b
+  ret a
+
+proc add a: u32 b: u32 -> u32
+  asm "add @,@" a b
+  ret a
+
+proc add a: u16 b: u16 -> u16
+  asm "add @,@" a b
+  ret a
+
+proc add a: u8 b: u8 -> u8
+  asm "add @,@" a b
+  ret a
+
 
 proc sub a: s64 b: s64 -> s64
   asm "sub @,@" a b
@@ -31,21 +47,53 @@ proc sub a: s8 b: s8 -> s8
   asm "sub @,@" a b
   ret a
 
+proc sub a: u64 b: u64 -> u64
+  asm "sub @,@" a b
+  ret a
+
+proc sub a: u32 b: u32 -> u32
+  asm "sub @,@" a b
+  ret a
+
+proc sub a: u16 b: u16 -> u16
+  asm "sub @,@" a b
+  ret a
+
+proc sub a: u8 b: u8 -> u8
+  asm "sub @,@" a b
+  ret a
+
 
 proc mul a: s64 b: s64 -> s64
   asm "mov rax,@" a
   asm noret "imul @" b
 
 proc mul a: s32 b: s32 -> s32
-  asm "mov rax,@" a
+  asm "mov eax,@" a
   asm noret "imul @" b
 
 proc mul a: s16 b: s16 -> s16
-  asm "mov rax,@" a
+  asm "mov ax,@" a
   asm noret "imul @" b
 
 proc mul a: s8 b: s8 -> s8
+  asm "mov al,@" a
+  asm noret "imul @" b
+
+proc mul a: u64 b: u64 -> u64
   asm "mov rax,@" a
+  asm noret "imul @" b
+
+proc mul a: u32 b: u32 -> u32
+  asm "mov eax,@" a
+  asm noret "imul @" b
+
+proc mul a: u16 b: u16 -> u16
+  asm "mov ax,@" a
+  asm noret "imul @" b
+
+proc mul a: u8 b: u8 -> u8
+  asm "mov al,@" a
   asm noret "imul @" b
 
 
@@ -56,17 +104,37 @@ proc div a: s64 b: s64 -> s64
 
 proc div a: s32 b: s32 -> s32
   asm "cdq"
-  asm "mov rax,@" a
+  asm "mov eax,@" a
   asm noret "idiv @" b
 
 proc div a: s16 b: s16 -> s16
   asm "cdq"
-  asm "mov rax,@" a
+  asm "mov ax,@" a
   asm noret "idiv @" b
 
 proc div a: s8 b: s8 -> s8
   asm "cdq"
+  asm "mov al,@" a
+  asm noret "idiv @" b
+
+proc div a: u64 b: u64 -> u64
+  asm "cdq"
   asm "mov rax,@" a
+  asm noret "idiv @" b
+
+proc div a: u32 b: u32 -> u32
+  asm "cdq"
+  asm "mov eax,@" a
+  asm noret "idiv @" b
+
+proc div a: u16 b: u16 -> u16
+  asm "cdq"
+  asm "mov ax,@" a
+  asm noret "idiv @" b
+
+proc div a: u8 b: u8 -> u8
+  asm "cdq"
+  asm "mov al,@" a
   asm noret "idiv @" b
 
 
@@ -94,6 +162,30 @@ proc mod a: s8 b: s8 -> s8
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
+proc mod a: u64 b: u64 -> u64
+  asm "mov rax,@" a
+  asm "cdq"
+  asm "idiv @" b
+  asm noret "mov rax,rdx"
+
+proc mod a: u32 b: u32 -> u32
+  asm "mov eax,@" a
+  asm "cdq"
+  asm "idiv @" b
+  asm noret "mov rax,edx"
+
+proc mod a: u16 b: u16 -> u16
+  asm "mov ax,@" a
+  asm "cdq"
+  asm "idiv @" b
+  asm noret "mov ax,dx"
+
+proc mod a: u8 b: u8 -> u8
+  asm "mov al,@" a
+  asm "cdq"
+  asm "idiv @" b
+  asm noret "mov al,dl"
+
 
 proc neg num: s64 -> s64
   asm "neg @" num
@@ -108,6 +200,22 @@ proc neg num: s16 -> s16
   ret num
 
 proc neg num: s8 -> s8
+  asm "neg @" num
+  ret num
+
+proc neg num: u64 -> u64
+  asm "neg @" num
+  ret num
+
+proc neg num: u32 -> u32
+  asm "neg @" num
+  ret num
+
+proc neg num: u16 -> u16
+  asm "neg @" num
+  ret num
+
+proc neg num: u8 -> u8
   asm "neg @" num
   ret num
 
@@ -129,6 +237,22 @@ proc or a: s8 b: s8 -> s8
   asm "or @,@" a b
   ret a
 
+proc or a: u64 b: u64 -> u64
+  asm "or @,@" a b
+  ret a
+
+proc or a: u32 b: u32 -> u32
+  asm "or @,@" a b
+  ret a
+
+proc or a: u16 b: u16 -> u16
+  asm "or @,@" a b
+  ret a
+
+proc or a: u8 b: u8 -> u8
+  asm "or @,@" a b
+  ret a
+
 
 proc and a: s64 b: s64 -> s64
   asm "and @,@" a b
@@ -143,6 +267,22 @@ proc and a: s16 b: s16 -> s16
   ret a
 
 proc and a: s8 b: s8 -> s8
+  asm "and @,@" a b
+  ret a
+
+proc and a: u64 b: u64 -> u64
+  asm "and @,@" a b
+  ret a
+
+proc and a: u32 b: u32 -> u32
+  asm "and @,@" a b
+  ret a
+
+proc and a: u16 b: u16 -> u16
+  asm "and @,@" a b
+  ret a
+
+proc and a: u8 b: u8 -> u8
   asm "and @,@" a b
   ret a
 
@@ -163,3 +303,18 @@ proc xor a: s8 b: s8 -> s8
   asm "xor @,@" a b
   ret a
 
+proc xor a: u64 b: u64 -> u64
+  asm "xor @,@" a b
+  ret a
+
+proc xor a: u32 b: u32 -> u32
+  asm "xor @,@" a b
+  ret a
+
+proc xor a: u16 b: u16 -> u16
+  asm "xor @,@" a b
+  ret a
+
+proc xor a: u8 b: u8 -> u8
+  asm "xor @,@" a b
+  ret a

@@ -1,69 +1,74 @@
 include "mem.mvl"
 
-proc strlen str: s64 -> s64
-  i = 0
+proc strlen str: u64 -> u64
+  i = 0u64
 
  body:
   ptr = @add str i
-  char = *s8 ptr
-  if char == 0s8 jump next
-  i = @add i 1
+  char = *u8 ptr
+  if char == 0u8 jump next
+  i = @add i 1u64
   jump body
  next:
 
   ret i
 
-proc s64_to_str num: s64 -> s64
-  buf_size = 1
-  size_to_alloc = @add buf_size 1
+proc u64_to_str num: u64 -> u64
+  buf_size = 1u64
+  size_to_alloc = @add buf_size 1u64
   buf = @malloc size_to_alloc
-  len = 0
+  len = 0u64
 
  body:
   if buf_size < len jump next
-  buf_size = @mul buf_size 2
-  size_to_alloc = @add buf_size 1
+  buf_size = @mul buf_size 2u64
+  size_to_alloc = @add buf_size 1u64
   @realloc buf size_to_alloc
  next:
 
-  dest = @add buf 1
+  dest = @add buf 1u64
   @memmove dest buf len
 
-  digit = @mod num 10
+  digit = @mod num 10u64
   digit = @add digit '0'
-  digit_char = cast s8 digit
+  digit_char = cast u8 digit
   *buf = digit_char
 
-  num = @div num 10
-  len = @add len 1
+  num = @div num 10u64
+  len = @add len 1u64
 
-  if num > 0 jump body
+  if num > 0u64 jump body
 
   ptr = @add buf len
-  *ptr = 0s8
+  *ptr = 0u8
 
   ret buf
 
-proc str_to_s64 str: s64 -> s64
-  num = 0
-  i = 0
+proc str_to_u64 str: u64 -> u64
+  num = 0u64
+  i = 0u64
 
  body:
   ptr = @add str i
-  char = *s8 ptr
-  if char == '\0's8 jump end
-  if char < '0's8 jump next
-  if char > '9's8 jump next
+  char = *u8 ptr
+
+  _zero = '0'
+  zero = cast u8 _zero
+  _nine = '9'
+  nine = cast u8 _nine
+  if char == 0u8 jump end
+  if char < zero jump next
+  if char > nine jump next
 
   ptr = @add str i
-  digit = @sub char 0s8
-  digit_s64 = cast s64 digit
+  _digit = @sub char 0u8
+  digit = cast u64 _digit
 
-  num = @mul num 10
-  num = @add num digit_s64
+  num = @mul num 10u64
+  num = @add num digit
 
  next:
-  i = @add i 1
+  i = @add i 1u64
 
   jump body
  end:

@@ -3,86 +3,88 @@ include "str.mvl"
 include "unix.mvl"
 include "math.mvl"
 
-proc println str: s64
+proc println str: u64
   @print str
-  @printl "\n" 1
+  @printl "\n" 1u64
 
-proc println fd: s64 str: s64
+proc println fd: u64 str: u64
   @print fd str
-  @printl fd "\n" 1
+  @printl fd "\n" 1u64
 
-proc print str: s64
+proc print str: u64
   len = @strlen str
   @printl str len
 
-proc print fd: s64 str: s64
+proc print fd: u64 str: u64
   len = @strlen str
   @printl fd str len
 
-proc printl str: s64 len: s64
-  @write 1 str len
+proc printl str: u64 len: u64
+  @write 1u64 str len
 
-proc printl fd: s64 str: s64 len: s64
+proc printl fd: u64 str: u64 len: u64
   @write fd str len
 
-proc input -> s64
-  t = @input 0
+proc input -> u64
+  t = @input 0u64
   ret t
 
-proc input fd: s64 -> s64
-  buf_cap = 16
-  buf_size = 0
-  size_to_alloc = @add buf_cap 1
+proc input fd: u64 -> u64
+  buf_cap = 16u64
+  buf_size = 0u64
+  size_to_alloc = @add buf_cap 1u64
   buf = @malloc size_to_alloc
 
-  EOF = @neg 1s8
+  EOF = -1u8
 
  body:
   char = @inputc fd
   if char == EOF jump next0
 
   if buf_size < buf_cap jump next1
-  buf_cap = @mul buf_cap 2
-  size_to_alloc = @add buf_cap 1
+  buf_cap = @mul buf_cap 264u64
+  size_to_alloc = @add buf_cap 16u64
   buf = @realloc buf size_to_alloc
  next1:
 
   next_ptr = @add buf buf_size
   *next_ptr = char
-  buf_size = @add buf_size 1
+  buf_size = @add buf_size 1u64
 
-  if char == '\n's8 jump next0
+  _new_line = '\n'
+  new_line = cast u8 _new_line
+  if char == new_line jump next0
 
   jump body
  next0:
 
   ret buf
 
-proc inputc -> s8
-  t = @inputc 0
+proc inputc -> u8
+  t = @inputc 0u64
   ret t
 
-proc inputc fd: s64 -> s8
-  char = 0s8
+proc inputc fd: u64 -> u8
+  char = 0u8
 
   ref = &char
-  len = @inputl fd ref 1
+  len = @inputl fd ref 1u64
 
-  if len == 0 jump eof
+  if len == 0u64 jump eof
   ret char
  eof:
-  EOF = @neg 1s8
+  EOF = @neg 1u8
   ret EOF
 
-proc inputl buf: s64 size: s64 -> s64
-  len = @read 0 buf size
+proc inputl buf: u64 size: u64 -> u64
+  len = @read 0u64 buf size
   ret len
 
-proc inputl fd: s64 buf: s64 size: s64 -> s64
+proc inputl fd: u64 buf: u64 size: u64 -> u64
   len = @read fd buf size
   ret len
 
-proc open path: s64 -> s64
+proc open path: u64 -> u64
   flags = @or O_RDWR O_CREAT
   flags = @or flags O_TRUNC
   mode = @or S_IRUSR S_IWUSR
