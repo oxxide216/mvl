@@ -82,23 +82,23 @@ proc mul a: s8 b: s8 -> s8
 
 proc mul a: u64 b: u64 -> u64
   asm "mov rax,@" a
-  asm noret "imul @" b
+  asm noret "mul @" b
 
 proc mul a: u32 b: u32 -> u32
   asm "mov eax,@" a
-  asm noret "imul @" b
+  asm noret "mul @" b
 
 proc mul a: u16 b: u16 -> u16
   asm "mov ax,@" a
-  asm noret "imul @" b
+  asm noret "mul @" b
 
 proc mul a: u8 b: u8 -> u8
   asm "mov al,@" a
-  asm noret "imul @" b
+  asm noret "mul @" b
 
 
 proc div a: s64 b: s64 -> s64
-  asm "cdq"
+  asm "cqo"
   asm "mov rax,@" a
   asm noret "idiv @" b
 
@@ -108,39 +108,39 @@ proc div a: s32 b: s32 -> s32
   asm noret "idiv @" b
 
 proc div a: s16 b: s16 -> s16
-  asm "cdq"
+  asm "cwd"
   asm "mov ax,@" a
   asm noret "idiv @" b
 
 proc div a: s8 b: s8 -> s8
-  asm "cdq"
+  asm "cbw"
   asm "mov al,@" a
   asm noret "idiv @" b
 
 proc div a: u64 b: u64 -> u64
-  asm "cdq"
+  asm "cqo"
   asm "mov rax,@" a
-  asm noret "idiv @" b
+  asm noret "div @" b
 
 proc div a: u32 b: u32 -> u32
   asm "cdq"
   asm "mov eax,@" a
-  asm noret "idiv @" b
+  asm noret "div @" b
 
 proc div a: u16 b: u16 -> u16
-  asm "cdq"
+  asm "cwd"
   asm "mov ax,@" a
-  asm noret "idiv @" b
+  asm noret "div @" b
 
 proc div a: u8 b: u8 -> u8
-  asm "cdq"
+  asm "cbw"
   asm "mov al,@" a
-  asm noret "idiv @" b
+  asm noret "div @" b
 
 
 proc mod a: s64 b: s64 -> s64
   asm "mov rax,@" a
-  asm "cdq"
+  asm "cqo"
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
@@ -152,19 +152,19 @@ proc mod a: s32 b: s32 -> s32
 
 proc mod a: s16 b: s16 -> s16
   asm "mov rax,@" a
-  asm "cdq"
+  asm "cwd"
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
 proc mod a: s8 b: s8 -> s8
-  asm "mov rax,@" a
+  asm "cbw rax,@" a
   asm "cdq"
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
 proc mod a: u64 b: u64 -> u64
   asm "mov rax,@" a
-  asm "cdq"
+  asm "cqo"
   asm "idiv @" b
   asm noret "mov rax,rdx"
 
@@ -176,7 +176,7 @@ proc mod a: u32 b: u32 -> u32
 
 proc mod a: u16 b: u16 -> u16
   asm "mov ax,@" a
-  asm "cdq"
+  asm "cwd"
   asm "idiv @" b
   asm noret "mov ax,dx"
 

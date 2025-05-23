@@ -4,16 +4,14 @@ include "unix.mvl"
 include "math.mvl"
 
 proc println str: u64
-  @print str
-  @printl "\n" 1u64
+  @println 1u64 str
 
 proc println fd: u64 str: u64
   @print fd str
   @printl fd "\n" 1u64
 
 proc print str: u64
-  len = @strlen str
-  @printl str len
+  @print 1u64 str
 
 proc print fd: u64 str: u64
   len = @strlen str
@@ -35,25 +33,20 @@ proc input fd: u64 -> u64
   size_to_alloc = @add buf_cap 1u64
   buf = @malloc size_to_alloc
 
-  EOF = -1u8
-
  body:
   char = @inputc fd
-  if char == EOF jump next0
+  if char == -1u8 jump next0
+  if char == 10u8 jump next0 # 10 = '\n'
 
   if buf_size < buf_cap jump next1
-  buf_cap = @mul buf_cap 264u64
-  size_to_alloc = @add buf_cap 16u64
+  buf_cap = @mul buf_cap 2u64
+  size_to_alloc = @add buf_cap 1u64
   buf = @realloc buf size_to_alloc
  next1:
 
   next_ptr = @add buf buf_size
   *next_ptr = char
   buf_size = @add buf_size 1u64
-
-  _new_line = '\n'
-  new_line = cast u8 _new_line
-  if char == new_line jump next0
 
   jump body
  next0:
@@ -70,11 +63,10 @@ proc inputc fd: u64 -> u8
   ref = &char
   len = @inputl fd ref 1u64
 
-  if len == 0u64 jump eof
+  if len != 1u64 jump eof
   ret char
  eof:
-  EOF = @neg 1u8
-  ret EOF
+  ret -1u8
 
 proc inputl buf: u64 size: u64 -> u64
   len = @read 0u64 buf size
