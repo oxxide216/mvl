@@ -140,7 +140,7 @@ static Arg token_to_arg(Token *token, Compiler *compiler) {
     program_push_static_segment(compiler->program, name, bytes,
                                 token->lexeme.len + 1);
 
-    VariableKind var_kind = { name, ValueKindU64 };
+    VariableKind var_kind = { name, ValueKindS64 };
     DA_APPEND(compiler->var_kinds.kinds, var_kind);
 
     return arg_var(name);
@@ -148,8 +148,8 @@ static Arg token_to_arg(Token *token, Compiler *compiler) {
 
   if (token->id == TT_CHAR_LIT) {
     return arg_value((Value) {
-      ValueKindU64,
-      { .u64 = token->lexeme.ptr[0] },
+      ValueKindS64,
+      { .s64 = token->lexeme.ptr[0] },
     });
   }
 
@@ -191,7 +191,6 @@ ValueKind compiler_get_arg_kind(Compiler *compiler, Arg *arg) {
 static Arg compile_arg(Compiler *compiler) {
   Token *arg = parser_expect_token(&compiler->parser, MASK(TT_IDENT) |
                                                       MASK(TT_NUMBER) |
-                                                      MASK(TT_NUMBER_TYPED) |
                                                       MASK(TT_STR_LIT) |
                                                       MASK(TT_CHAR_LIT));
 
@@ -261,8 +260,7 @@ void collect_defs(Compiler *compiler) {
     } else if (token->id == TT_STATIC) {
       Token *name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
       parser_expect_token(&compiler->parser, MASK(TT_PUT));
-      Token *value_token = parser_expect_token(&compiler->parser, MASK(TT_NUMBER) |
-                                                                  MASK(TT_NUMBER_TYPED));
+      Token *value_token = parser_expect_token(&compiler->parser, MASK(TT_NUMBER));
 
       ValueKind value_kind = str_to_number_value(value_token->lexeme).kind;
       VariableKind var_kind = { name_token->lexeme, value_kind };
@@ -475,8 +473,7 @@ void compile(Tokens tokens, Program *program) {
     case TT_STATIC: {
       Token *name_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
       parser_expect_token(&compiler.parser, MASK(TT_PUT));
-      Token *value_token = parser_expect_token(&compiler.parser, MASK(TT_NUMBER) |
-                                                                 MASK(TT_NUMBER_TYPED));
+      Token *value_token = parser_expect_token(&compiler.parser, MASK(TT_NUMBER));
 
       Value value = str_to_number_value(value_token->lexeme);
       program_push_static_var(program, name_token->lexeme, value, false);

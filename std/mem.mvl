@@ -1,68 +1,75 @@
 include "str.mvl"
 
-proc malloc size: u64 -> u64
-  size = @add size 8u64
-  prot = @or PROT_READ PROT_WRITE
-  flags = @or MAP_PRIVATE MAP_ANONYMOUS
-  fildes = @neg 1u64
+static PROT = 0
+static FLAGS = 0
+static FILDES = -1
 
-  ptr = @mmap 0u64 size prot flags fildes 0u64
+init
+  PROT = @or PROT_READ PROT_WRITE
+  FLAGS = @or MAP_PRIVATE MAP_ANONYMOUS
+
+proc malloc size: s64 -> s64
+  size = @add size 8
+
+  ptr = @mmap 0 size PROT FLAGS FILDES 0
 
   *ptr = size
-  ptr = @add ptr 8u64
+  ptr = @add ptr 8
   ret ptr
 
-proc realloc ptr: u64 size: u64 -> u64
-  ptr = @sub ptr 8u64
-  size = *u64 ptr
+proc realloc ptr: s64 size: s64 -> s64
+  ptr = @sub ptr 8
+  size = *s64 ptr
 
   new_ptr = @malloc size
   @memcopy new_ptr ptr size
   @free ptr
   ret new_ptr
 
-proc free ptr: u64
-  ptr = @sub ptr 8u64
-  size = *u64 ptr
+proc free ptr: s64
+  ptr = @sub ptr 8
+  size = *s64 ptr
   @munmap ptr size
 
-proc memcopy dest: u64 src: u64 size: u64
-  i = 0u64
-  byte = 0u8
+proc memcopy dest: s64 src: s64 size: s64
+  i = 0
+  byte = 0s8
   dest_ptr = dest
   src_ptr = src
 
  body:
-  if i >= size jump end
-  byte = *u8 src_ptr
+  if i == size jump end
+  byte = *s8 src_ptr
   *dest_ptr = byte
 
-  dest_ptr = @add dest_ptr 1u64
-  src_ptr = @add src_ptr 1u64
-  i = @add i 1u64
+  dest_ptr = @add dest_ptr 1
+  src_ptr = @add src_ptr 1
+  i = @add i 1
   jump body
  end:
 
-proc memmove dest: u64 src: u64 size: u64
+proc memmove dest: s64 src: s64 size: s64
   if dest < src jump next
 
-  i = @sub size 1u64
+  if size == 0 jump end
+
+  i = @sub size 1
   dest_ptr = @add dest i
   src_ptr = @add src i
 
  body0:
-  if i < 0u64 jump end
+  if i < 0 jump end
   byte = *u8 src_ptr
   *dest_ptr = byte
 
-  i = @sub i 1u64
-  dest_ptr = @sub dest_ptr 1u64
-  src_ptr = @sub src_ptr 1u64
+  i = @sub i 1
+  dest_ptr = @sub dest_ptr 1
+  src_ptr = @sub src_ptr 1
   jump body0
 
  next:
 
-  i = 0u64
+  i = 0
   dest_ptr = dest
   src_ptr = src
 
@@ -71,9 +78,9 @@ proc memmove dest: u64 src: u64 size: u64
   byte = *u8 src_ptr
   *dest_ptr = byte
 
-  dest_ptr = @add dest_ptr 1u64
-  src_ptr = @add src_ptr 1u64
-  i = @add i 1u64
+  dest_ptr = @add dest_ptr 1
+  src_ptr = @add src_ptr 1
+  i = @add i 1
   jump body1
 
  end:

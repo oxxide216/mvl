@@ -25,7 +25,6 @@ static Str token_id_names[] = {
   STR_LIT("`cast`"),
   STR_LIT("identifier"),
   STR_LIT("number"),
-  STR_LIT("typed number"),
   STR_LIT("`(`"),
   STR_LIT("`)`"),
   STR_LIT("`,`"),
@@ -118,7 +117,6 @@ Token *parser_expect_token(Parser *parser, u64 id_mask) {
 ArgKind token_id_to_arg_kind(u32 id) {
   switch (id) {
   case TT_NUMBER:       return ArgKindValue;
-  case TT_NUMBER_TYPED: return ArgKindValue;
   case TT_IDENT:        return ArgKindVar;
 
   default: {

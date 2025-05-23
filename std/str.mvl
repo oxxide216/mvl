@@ -1,76 +1,93 @@
 include "mem.mvl"
 
-proc strlen str: u64 -> u64
-  i = 0u64
+proc strlen str: s64 -> s64
+  i = 0
 
  body:
   ptr = @add str i
-  char = *u8 ptr
-  if char == 0u8 jump next
-  i = @add i 1u64
+  char = *s8 ptr
+  if char == 0s8 jump end
+  i = @add i 1
   jump body
- next:
+ end:
 
   ret i
 
-proc u64_to_str num: u64 -> u64
-  buf_size = 1u64
-  size_to_alloc = @add buf_size 1u64
+proc s64_to_str num: s64 -> s64
+  buf_size = 1
+  size_to_alloc = @add buf_size 1
   buf = @malloc size_to_alloc
-  len = 0u64
+  len = 0
 
  body:
   if buf_size < len jump next
-  buf_size = @mul buf_size 2u64
-  size_to_alloc = @add buf_size 1u64
+  buf_size = @mul buf_size 2
+  size_to_alloc = @add buf_size 1
   @realloc buf size_to_alloc
  next:
 
-  dest = @add buf 1u64
+  dest = @add buf 1
   @memmove dest buf len
 
-  digit = @mod num 10u64
+  digit = @mod num 10
   digit = @add digit '0'
-  digit_char = cast u8 digit
-  *buf = digit_char
+  digit_s8 = cast s8 digit
+  *buf = digit_s8
 
-  num = @div num 10u64
-  len = @add len 1u64
+  num = @div num 10
+  len = @add len 1
 
-  if num > 0u64 jump body
+  if num > 0 jump body
 
   ptr = @add buf len
-  *ptr = 0u8
+  *ptr = 0s8
 
   ret buf
 
-proc str_to_u64 str: u64 -> u64
-  num = 0u64
-  i = 0u64
+proc str_to_s64 str: s64 -> s64
+  num = 0
+  is_neg = 0
+  i = 0
+
+  ptr = *s8 str
+  char = *s8 str
+
+  if char != 0s8 jump next0
+  ret 0
+ next0:
+
+  if char != 45s8 jump next1 # 45 = '-'
+  is_neg = 1
+  i = 1
+ next1:
 
  body:
   ptr = @add str i
-  char = *u8 ptr
+  char = *s8 ptr
 
   _zero = '0'
-  zero = cast u8 _zero
+  zero = cast s8 _zero
   _nine = '9'
-  nine = cast u8 _nine
-  if char == 0u8 jump end
-  if char < zero jump next
-  if char > nine jump next
+  nine = cast s8 _nine
+  if char == 0s8 jump end
+  if char < zero jump continue
+  if char > nine jump continue
 
   ptr = @add str i
-  _digit = @sub char 0u8
-  digit = cast u64 _digit
+  _digit = @sub char 0s8
+  digit = cast s64 _digit
 
-  num = @mul num 10u64
+  num = @mul num 10
   num = @add num digit
 
- next:
-  i = @add i 1u64
+ continue:
+  i = @add i 1
 
   jump body
  end:
+
+  if is_neg == 1 jump next2
+  num = @neg num
+ next2:
 
   ret num

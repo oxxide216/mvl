@@ -172,7 +172,7 @@ proc mod a: u32 b: u32 -> u32
   asm "mov eax,@" a
   asm "cdq"
   asm "idiv @" b
-  asm noret "mov rax,edx"
+  asm noret "mov eax,edx"
 
 proc mod a: u16 b: u16 -> u16
   asm "mov ax,@" a
