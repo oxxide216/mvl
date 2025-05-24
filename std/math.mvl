@@ -145,22 +145,22 @@ proc mod a: s64 b: s64 -> s64
   asm noret "mov rax,rdx"
 
 proc mod a: s32 b: s32 -> s32
-  asm "mov rax,@" a
+  asm "mov eax,@" a
   asm "cdq"
   asm "idiv @" b
-  asm noret "mov rax,rdx"
+  asm noret "mov eax,edx"
 
 proc mod a: s16 b: s16 -> s16
-  asm "mov rax,@" a
+  asm "mov ax,@" a
   asm "cwd"
   asm "idiv @" b
-  asm noret "mov rax,rdx"
+  asm noret "mov ax,dx"
 
 proc mod a: s8 b: s8 -> s8
-  asm "cbw rax,@" a
-  asm "cdq"
+  asm "mov al,@" a
+  asm "cbw"
   asm "idiv @" b
-  asm noret "mov rax,rdx"
+  asm noret "mov al,dl"
 
 proc mod a: u64 b: u64 -> u64
   asm "mov rax,@" a
@@ -182,7 +182,7 @@ proc mod a: u16 b: u16 -> u16
 
 proc mod a: u8 b: u8 -> u8
   asm "mov al,@" a
-  asm "cdq"
+  asm "cbw"
   asm "idiv @" b
   asm noret "mov al,dl"
 

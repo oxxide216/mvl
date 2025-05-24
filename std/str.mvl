@@ -49,7 +49,7 @@ proc str_to_s64 str: s64 -> s64
   is_neg = 0
   i = 0
 
-  ptr = *s8 str
+  ptr = str
   char = *s8 str
 
   if char != 0s8 jump next0
