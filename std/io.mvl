@@ -8,10 +8,7 @@ proc println str: s64
 
 proc println fd: s64 str: s64
   @print fd str
-
-  new_line = '\n'
-  new_line_s64 = cast s64 new_line
-  @printl fd new_line_s64 1
+  @printl fd "\n" 1
 
 proc print str: s64
   @print 1 str

@@ -14,20 +14,20 @@ proc strlen str: s64 -> s64
   ret i
 
 proc s64_to_str num: s64 -> s64
-  buf_size = 1
+  buf_cap = 1
+  buf_size = 0
   size_to_alloc = @add buf_size 1
   buf = @malloc size_to_alloc
-  len = 0
 
  body:
-  if buf_size < len jump next
-  buf_size = @mul buf_size 2
-  size_to_alloc = @add buf_size 1
+  if buf_size < buf_cap jump next
+  buf_cap = @add buf_cap 1
+  size_to_alloc = @add buf_cap 1
   @realloc buf size_to_alloc
  next:
 
   dest = @add buf 1
-  @memmove dest buf len
+  @memmove dest buf buf_size
 
   digit = @mod num 10
   digit = @add digit '0'
@@ -35,11 +35,11 @@ proc s64_to_str num: s64 -> s64
   *buf = digit_s8
 
   num = @div num 10
-  len = @add len 1
+  buf_size = @add buf_size 1
 
   if num > 0 jump body
 
-  ptr = @add buf len
+  ptr = @add buf buf_size
   *ptr = 0s8
 
   ret buf
