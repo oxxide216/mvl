@@ -10,6 +10,14 @@ proc println fd: s64 str: s64
   @print fd str
   @printl fd "\n" 1
 
+proc printc char: s64
+  @printc 1 char
+
+proc printc fd: s64 char: s64
+  ref = &char
+  ref_s64 = cast s64 ref
+  @printl 1 ref_s64
+
 proc print str: s64
   @print 1 str
 
@@ -35,8 +43,8 @@ proc input fd: s64 -> s64
 
  body:
   char = @inputc fd
-  if char == -1s8 jump next0
-  if char == 10s8 jump next0 # 10 = '\n'
+  if char == -1 jump next0
+  if char == 10 jump next0 # 10 = '\n'
 
   if buf_size < buf_cap jump next1
   buf_cap = @mul buf_cap 2
@@ -53,12 +61,12 @@ proc input fd: s64 -> s64
 
   ret buf
 
-proc inputc -> s8
+proc inputc -> s64
   t = @inputc 0
   ret t
 
-proc inputc fd: s64 -> s8
-  char = 0s8
+proc inputc fd: s64 -> s64
+  char = 0
 
   ref = &char
   ref_s64 = cast s64 ref
@@ -67,7 +75,7 @@ proc inputc fd: s64 -> s8
   if len != 1 jump eof
   ret char
  eof:
-  ret -1s8
+  ret -1
 
 proc inputl buf: s64 size: s64 -> s64
   len = @read 0 buf size

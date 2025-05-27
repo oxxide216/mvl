@@ -13,6 +13,31 @@ proc strlen str: s64 -> s64
 
   ret i
 
+proc streq a: s64 b: s64 -> s64
+  a_len = @strlen a
+  b_len = @strlen b
+  if a_len != b_len jump error
+
+  i = 0
+
+ body:
+  if i == a_len jump end
+
+  a_ptr = @add a i
+  a_char = *s8 a_ptr
+  b_ptr = @add b i
+  b_char = *s8 b_ptr
+  if a_char != b_char jump error
+
+  i = @add i 1
+  jump body
+ end:
+
+  ret 1
+
+ error:
+  ret 0
+
 proc s64_to_str num: s64 -> s64
   buf_cap = 1
   buf_size = 0

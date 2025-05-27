@@ -157,7 +157,7 @@ static Arg token_to_arg(Token *token, Compiler *compiler) {
   return str_to_arg(token->lexeme, arg_kind);
 }
 
-ValueKind compiler_get_arg_kind(Compiler *compiler, Arg *arg) {
+ValueKind compiler_get_arg_kind(Compiler *compiler, Arg *arg, Procedure *current_proc) {
   switch (arg->kind) {
   case ArgKindValue: {
     return arg->as.value.kind;
@@ -176,8 +176,8 @@ ValueKind compiler_get_arg_kind(Compiler *compiler, Arg *arg) {
         return var_kind->kind;
     }
 
-    ERROR("Variable `"STR_FMT"` was not defined before usage\n",
-          STR_ARG(arg->as.var));
+    ERROR(STR_FMT": variable `"STR_FMT"` was not defined before usage\n",
+          STR_ARG(current_proc->name), STR_ARG(arg->as.var));
     exit(1);
   } break;
 
@@ -208,7 +208,7 @@ static void compile_call(Compiler *compiler, Str dest,
     Arg arg = compile_arg(compiler);
     args_push_arg(&args, arg);
 
-    ValueKind param_kind = compiler_get_arg_kind(compiler, &arg);
+    ValueKind param_kind = compiler_get_arg_kind(compiler, &arg, current_proc);
     DA_APPEND(param_kinds, param_kind);
   }
 
@@ -442,20 +442,20 @@ void compile(Tokens tokens, Program *program) {
       if (next && next->id == TT_CAST) {
         parser_next_token(&compiler.parser);
         Token *value_kind_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-        Token *var_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        Token *arg_var_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
 
         ValueKind kind = str_to_value_kind(value_kind_name->lexeme);
 
         VariableKind var_kind = { token->lexeme, kind };
         DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
-        proc_cast(proc, token->lexeme, kind, var_name->lexeme);
+        proc_cast(proc, token->lexeme, kind, arg_var_name->lexeme);
         break;
       }
 
       Arg arg = compile_arg(&compiler);
 
-      ValueKind param_kind = compiler_get_arg_kind(&compiler, &arg);
+      ValueKind param_kind = compiler_get_arg_kind(&compiler, &arg, proc);
       VariableKind var_kind = { token->lexeme, param_kind };
       DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
