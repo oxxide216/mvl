@@ -10,14 +10,6 @@ proc println fd: s64 str: s64
   @print fd str
   @printl fd "\n" 1
 
-proc printc char: s64
-  @printc 1 char
-
-proc printc fd: s64 char: s64
-  ref = &char
-  ref_s64 = cast s64 ref
-  @printl 1 ref_s64
-
 proc print str: s64
   @print 1 str
 
