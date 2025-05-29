@@ -29,6 +29,15 @@ typedef struct {
 typedef Da(DefinedProcedure) DefinedProcedures;
 
 typedef struct {
+  bool is_while;
+  Str  begin_label_name;
+  Str  end_label_name;
+  u32  first_var_index;
+} Block;
+
+typedef Da(Block) Blocks;
+
+typedef struct {
   Program            *program;
   Parser              parser;
   VariableKinds       var_kinds;
@@ -282,13 +291,20 @@ void compile(Tokens tokens, Program *program) {
   u32 current_proc_id = define_proc(&compiler, STR_LIT("@init"),
                                     ValueKindUnit, (ParamKinds) {0});
 
+  u32 labels_count = 0;
+  Blocks blocks = {0};
+
   collect_defs(&compiler);
 
   while (parser_peek_token(&compiler.parser)) {
     Token *token = parser_expect_token(&compiler.parser, MASK(TT_NEWLINE) |
                                                          MASK(TT_PROC) |
-                                                         MASK(TT_JUMP) |
                                                          MASK(TT_IF) |
+                                                         MASK(TT_ELSE) |
+                                                         MASK(TT_WHILE) |
+                                                         MASK(TT_END) |
+                                                         MASK(TT_BREAK) |
+                                                         MASK(TT_CONTINUE) |
                                                          MASK(TT_RET) |
                                                          MASK(TT_IDENT) |
                                                          MASK(TT_AT) |
@@ -314,6 +330,11 @@ void compile(Tokens tokens, Program *program) {
     }
 
     case TT_PROC: {
+      if (blocks.len > 0) {
+        ERROR(STR_FMT": block was not closed\n", STR_ARG(proc->name));
+        exit(1);
+      }
+
       Token *name_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
       ValueKind ret_val_kind = ValueKindUnit;
       ProcParams params = {0};
@@ -351,12 +372,8 @@ void compile(Tokens tokens, Program *program) {
       proc = program_push_proc(program, name, ret_val_kind, params);
     } break;
 
-    case TT_JUMP: {
-      Token *label_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-      proc_jump(proc, label_name->lexeme);
-    } break;
-
-    case TT_IF: {
+    case TT_IF:
+    case TT_WHILE: {
       Arg arg0 = compile_arg(&compiler);
 
       Token *op = parser_expect_token(&compiler.parser, MASK(TT_EQ) | MASK(TT_NE) |
@@ -365,19 +382,15 @@ void compile(Tokens tokens, Program *program) {
 
       Arg arg1 = compile_arg(&compiler);
 
-      parser_expect_token(&compiler.parser, MASK(TT_JUMP));
-
-      Token *label_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-
       RelOp rel_op;
 
       switch (op->id) {
-      case TT_EQ: rel_op = RelOpEqual; break;
-      case TT_NE: rel_op = RelOpNotEqual; break;
-      case TT_GT: rel_op = RelOpGreater; break;
-      case TT_LS: rel_op = RelOpLess; break;
-      case TT_GE: rel_op = RelOpGreaterOrEqual; break;
-      case TT_LE: rel_op = RelOpLessOrEqual; break;
+      case TT_EQ: rel_op = RelOpNotEqual; break;
+      case TT_NE: rel_op = RelOpEqual; break;
+      case TT_GT: rel_op = RelOpLessOrEqual; break;
+      case TT_LS: rel_op = RelOpGreaterOrEqual; break;
+      case TT_GE: rel_op = RelOpLess; break;
+      case TT_LE: rel_op = RelOpGreater; break;
 
       default: {
         ERROR("Unreachable\n");
@@ -385,7 +398,92 @@ void compile(Tokens tokens, Program *program) {
       }
       }
 
-      proc_cond_jump(proc, rel_op, arg0, arg1, label_name->lexeme);
+      bool is_while = token->id == TT_WHILE;
+
+      Str begin_label_name = {0};
+      if (is_while) {
+        StringBuilder begin_label_sb = {0};
+        sb_push(&begin_label_sb, "label");
+        sb_push_u32(&begin_label_sb, labels_count++);
+        begin_label_name = sb_to_str(begin_label_sb);
+
+        proc_add_label(proc, begin_label_name);
+      }
+
+      StringBuilder end_label_sb = {0};
+      sb_push(&end_label_sb, "label");
+      sb_push_u32(&end_label_sb, labels_count++);
+      Str end_label_name = sb_to_str(end_label_sb);
+
+      Block new_block = {
+        is_while,
+        begin_label_name,
+        end_label_name,
+        compiler.var_kinds.kinds.len,
+      };
+      DA_APPEND(blocks, new_block);
+
+      proc_cond_jump(proc, rel_op, arg0, arg1, end_label_name);
+    } break;
+
+    case TT_ELSE: {
+      if (blocks.len == 0 || blocks.items[blocks.len - 1].is_while) {
+        ERROR(STR_FMT": `else` not inside of `if`\n", STR_ARG(proc->name));
+        exit(1);
+      }
+
+      Block *block = blocks.items + blocks.len - 1;
+
+      compiler.var_kinds.kinds.len = block->first_var_index;
+
+      StringBuilder new_end_label_sb = {0};
+      sb_push(&new_end_label_sb, "label");
+      sb_push_u32(&new_end_label_sb, labels_count++);
+      Str new_end_label_name = sb_to_str(new_end_label_sb);
+
+      proc_jump(proc, new_end_label_name);
+      proc_add_label(proc, block->end_label_name);
+
+      block->end_label_name = new_end_label_name;
+    } break;
+
+    case TT_END: {
+      if (blocks.len == 0) {
+        ERROR(STR_FMT": `end` not inside of a block\n", STR_ARG(proc->name));
+        exit(1);
+      }
+
+      Block *block = blocks.items + --blocks.len;
+
+      compiler.var_kinds.kinds.len = block->first_var_index;
+
+      if (block->is_while)
+        proc_jump(proc, block->begin_label_name);
+      proc_add_label(proc, block->end_label_name);
+    } break;
+
+    case TT_BREAK:
+    case TT_CONTINUE: {
+      bool found_while = false;
+
+      for (u32 i = blocks.len; i > 0; --i) {
+        if (blocks.items[i - 1].is_while) {
+          found_while = true;
+          if (token->id == TT_BREAK)
+            proc_jump(proc, blocks.items[i - 1].end_label_name);
+          else
+            proc_jump(proc, blocks.items[i - 1].begin_label_name);
+          break;
+        }
+      }
+
+      if (!found_while) {
+        if (token->id == TT_BREAK)
+          ERROR(STR_FMT": `break` not inside of a loop\n", STR_ARG(proc->name));
+        else
+          ERROR(STR_FMT": `continue` not inside of a loop\n", STR_ARG(proc->name));
+        exit(1);
+      }
     } break;
 
     case TT_RET: {

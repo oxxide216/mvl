@@ -37,50 +37,44 @@ proc memcopy dest: s64 src: s64 size: s64
   dest_ptr = dest
   src_ptr = src
 
- body:
-  if i == size jump end
-  byte = *s8 src_ptr
-  *dest_ptr = byte
+  while i < size
+    byte = *s8 src_ptr
+    *dest_ptr = byte
 
-  dest_ptr = @add dest_ptr 1
-  src_ptr = @add src_ptr 1
-  i = @add i 1
-  jump body
- end:
+    dest_ptr = @add dest_ptr 1
+    src_ptr = @add src_ptr 1
+    i = @add i 1
+  end
 
 proc memmove dest: s64 src: s64 size: s64
-  if dest < src jump next
+  if size == 0
+    ret
+  end
 
-  if size == 0 jump end
+  if dest > src
+    i = @sub size 1
+    dest_ptr = @add dest i
+    src_ptr = @add src i
 
-  i = @sub size 1
-  dest_ptr = @add dest i
-  src_ptr = @add src i
+    while i >= 0
+      byte = *u8 src_ptr
+      *dest_ptr = byte
 
- body0:
-  if i < 0 jump end
-  byte = *u8 src_ptr
-  *dest_ptr = byte
+      i = @sub i 1
+      dest_ptr = @sub dest_ptr 1
+      src_ptr = @sub src_ptr 1
+    end
+  else
+    i = 0
+    dest_ptr = dest
+    src_ptr = src
 
-  i = @sub i 1
-  dest_ptr = @sub dest_ptr 1
-  src_ptr = @sub src_ptr 1
-  jump body0
+    while i < size
+      byte = *u8 src_ptr
+      *dest_ptr = byte
 
- next:
-
-  i = 0
-  dest_ptr = dest
-  src_ptr = src
-
- body1:
-  if i == size jump end
-  byte = *u8 src_ptr
-  *dest_ptr = byte
-
-  dest_ptr = @add dest_ptr 1
-  src_ptr = @add src_ptr 1
-  i = @add i 1
-  jump body1
-
- end:
+      dest_ptr = @add dest_ptr 1
+      src_ptr = @add src_ptr 1
+      i = @add i 1
+    end
+  end

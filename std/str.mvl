@@ -3,66 +3,70 @@ include "mem.mvl"
 proc strlen str: s64 -> s64
   i = 0
 
- body:
   ptr = @add str i
   char = *s8 ptr
-  if char == 0s8 jump end
-  i = @add i 1
-  jump body
- end:
+
+  while char != 0s8
+    ptr = @add str i
+    char = *s8 ptr
+    i = @add i 1
+  end
 
   ret i
 
 proc streq a: s64 b: s64 -> s64
   a_len = @strlen a
   b_len = @strlen b
-  if a_len != b_len jump error
+
+  if a_len != b_len
+    ret 0
+  end
 
   i = 0
+  while i < a_len
+    a_ptr = @add a i
+    a_char = *s8 a_ptr
+    b_ptr = @add b i
+    b_char = *s8 b_ptr
+    if a_char != b_char
+      ret 0
+    end
 
- body:
-  if i == a_len jump end
-
-  a_ptr = @add a i
-  a_char = *s8 a_ptr
-  b_ptr = @add b i
-  b_char = *s8 b_ptr
-  if a_char != b_char jump error
-
-  i = @add i 1
-  jump body
- end:
+    i = @add i 1
+  end
 
   ret 1
-
- error:
-  ret 0
 
 proc s64_to_str num: s64 -> s64
   buf_cap = 1
   buf_size = 0
-  size_to_alloc = @add buf_size 1
+  size_to_alloc = @add buf_cap 1
   buf = @malloc size_to_alloc
 
- body:
-  if buf_size < buf_cap jump next
-  buf_cap = @add buf_cap 1
-  size_to_alloc = @add buf_cap 1
-  @realloc buf size_to_alloc
- next:
+  while 1 == 1
+    if buf_size >= buf_cap
+      buf_cap = @mul buf_cap 2
+      size_to_alloc = @add buf_cap 1
+      @realloc buf size_to_alloc
+    end
 
-  dest = @add buf 1
-  @memmove dest buf buf_size
+    dest = @add buf 1
+    @memmove dest buf buf_size
 
-  digit = @mod num 10
-  digit = @add digit '0'
-  digit_s8 = cast s8 digit
-  *buf = digit_s8
+    digit = @mod num 10
+    char = @add digit '0'
+    char_s8 = cast s8 char
 
-  num = @div num 10
-  buf_size = @add buf_size 1
+    ptr = @add buf buf_size
+    *ptr = char_s8
 
-  if num > 0 jump body
+    num = @div num 10
+    buf_size = @add buf_size 1
+
+    if digit == 0
+      break
+    end
+  end
 
   ptr = @add buf buf_size
   *ptr = 0s8
@@ -77,42 +81,47 @@ proc str_to_s64 str: s64 -> s64
   ptr = str
   char = *s8 str
 
-  if char != 0s8 jump next0
-  ret 0
- next0:
+  if char == 0s8
+    ret 0
+  end
 
-  if char != 45s8 jump next1 # 45 = '-'
-  is_neg = 1
-  i = 1
- next1:
+  if char == 45s8 # 45 = '-'
+    is_neg = 1
+    i = 1
+  end
 
- body:
-  ptr = @add str i
-  char = *s8 ptr
+  while 1 == 1
+    ptr = @add str i
+    char = *s8 ptr
 
-  _zero = '0'
-  zero = cast s8 _zero
-  _nine = '9'
-  nine = cast s8 _nine
-  if char == 0s8 jump end
-  if char < zero jump continue
-  if char > nine jump continue
+    _zero = '0'
+    zero = cast s8 _zero
+    _nine = '9'
+    nine = cast s8 _nine
+    if char == 0s8
+      break
+    end
+    if char < zero
+      i = @add i 1
+      continue
+    end
+    if char > nine
+      i = @add i 1
+      continue
+    end
 
-  ptr = @add str i
-  _digit = @sub char 0s8
-  digit = cast s64 _digit
+    ptr = @add str i
+    _digit = @sub char 0s8
+    digit = cast s64 _digit
 
-  num = @mul num 10
-  num = @add num digit
+    num = @mul num 10
+    num = @add num digit
 
- continue:
-  i = @add i 1
+    i = @add i 1
+  end
 
-  jump body
- end:
-
-  if is_neg == 1 jump next2
-  num = @neg num
- next2:
+  if is_neg == 1
+    num = @neg num
+  end
 
   ret num

@@ -8,7 +8,7 @@
 
 typedef struct {
   Str lexeme;
-  u32 id;
+  u64 id;
   u32 row, col;
   Str file_path;
 } Token;

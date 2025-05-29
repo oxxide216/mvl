@@ -5,8 +5,12 @@ str_lit="
 char_lit='
 
 proc=proc
-jump=jump
 if=if
+else=else
+while=while
+end=end
+break=break
+continue=continue
 ret=ret
 include=include
 static=static

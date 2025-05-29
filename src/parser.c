@@ -14,8 +14,12 @@ static Str token_id_names[] = {
   STR_LIT("string literal"),
   STR_LIT("character literal"),
   STR_LIT("`proc`"),
-  STR_LIT("`jump`"),
   STR_LIT("`if`"),
+  STR_LIT("`else`"),
+  STR_LIT("`while`"),
+  STR_LIT("`end`"),
+  STR_LIT("`break`"),
+  STR_LIT("`continue`"),
   STR_LIT("`ret`"),
   STR_LIT("`include`"),
   STR_LIT("`static`"),
@@ -55,7 +59,7 @@ Token *parser_next_token(Parser *parser) {
   return token;
 }
 
-void print_id_mask(u32 id_mask, Str lexeme, FILE *stream) {
+void print_id_mask(u64 id_mask, Str lexeme, FILE *stream) {
   u32 len = ARRAY_LEN(token_id_names);
   u32 max_matched_ids_count = 0;
 
@@ -95,7 +99,7 @@ void expect_token(Token *token, u64 id_mask) {
     exit(1);
   }
 
-  if (token && id_mask & (1 << token->id))
+  if (token && id_mask & ((u64) 1 << token->id))
     return;
 
   PERROR(STR_FMT":%u:%u: ", "Expected ",
@@ -114,7 +118,7 @@ Token *parser_expect_token(Parser *parser, u64 id_mask) {
   return token;
 }
 
-ArgKind token_id_to_arg_kind(u32 id) {
+ArgKind token_id_to_arg_kind(u64 id) {
   switch (id) {
   case TT_NUMBER:       return ArgKindValue;
   case TT_IDENT:        return ArgKindVar;

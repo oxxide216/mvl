@@ -33,23 +33,25 @@ proc input fd: s64 -> s64
   size_to_alloc = @add buf_cap 1
   buf = @malloc size_to_alloc
 
- body:
-  char = @inputc fd
-  if char == -1 jump next0
-  if char == 10 jump next0 # 10 = '\n'
+  while 1 == 1
+    char = @inputc fd
+    if char == -1
+      break
+    end
+    if char == 10 # 10 = '\n'
+      break
+    end
 
-  if buf_size < buf_cap jump next1
-  buf_cap = @mul buf_cap 2
-  size_to_alloc = @add buf_cap 1
-  buf = @realloc buf size_to_alloc
- next1:
+    if buf_size >= buf_cap
+      buf_cap = @mul buf_cap 2
+      size_to_alloc = @add buf_cap 1
+      buf = @realloc buf size_to_alloc
+    end
 
-  next_ptr = @add buf buf_size
-  *next_ptr = char
-  buf_size = @add buf_size 1
-
-  jump body
- next0:
+    next_ptr = @add buf buf_size
+    *next_ptr = char
+    buf_size = @add buf_size 1
+  end
 
   ret buf
 
@@ -64,9 +66,10 @@ proc inputc fd: s64 -> s64
   ref_s64 = cast s64 ref
   len = @inputl fd ref_s64 1
 
-  if len != 1 jump eof
-  ret char
- eof:
+  if len == 1
+    ret char
+  end
+
   ret -1
 
 proc inputl buf: s64 size: s64 -> s64
