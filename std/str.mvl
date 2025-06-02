@@ -47,11 +47,8 @@ proc s64_to_str num: s64 -> s64
     if buf_size >= buf_cap
       buf_cap = @mul buf_cap 2
       size_to_alloc = @add buf_cap 1
-      @realloc buf size_to_alloc
+      buf = @realloc buf size_to_alloc
     end
-
-    dest = @add buf 1
-    @memmove dest buf buf_size
 
     digit = @mod num 10
     char = @add digit '0'
@@ -63,9 +60,23 @@ proc s64_to_str num: s64 -> s64
     num = @div num 10
     buf_size = @add buf_size 1
 
-    if digit == 0
+    if num == 0
       break
     end
+  end
+
+  i = 0
+  j = @sub buf_size 1
+  while i < j
+    ptr_a = @add buf i
+    ptr_b = @add buf j
+    temp_a = *s8 ptr_a
+    temp_b = *s8 ptr_b
+    *ptr_a = temp_b
+    *ptr_b = temp_a
+
+    i = @add i 1
+    j = @sub j 1
   end
 
   ptr = @add buf buf_size
