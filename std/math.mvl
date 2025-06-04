@@ -1,320 +1,52 @@
-proc naked add a: s64 b: s64 -> s64
-  asm "add @,@" a b
-  asm "mov rax,@" a
+macro add a b -> r
+  r = a
+  asm "mov @,@" r b
+end
 
-proc naked add a: s32 b: s32 -> s32
-  asm "add @,@" a b
-  asm "mov eax,@" a
+macro sub a b -> r
+  r = a
+  asm "mov @,@" r b
+end
 
-proc naked add a: s16 b: s16 -> s16
-  asm "add @,@" a b
-  asm "mov ax,@" a
-
-proc naked add a: s8 b: s8 -> s8
-  asm "add @,@" a b
-  asm "mov al,@" a
-
-proc naked add a: u64 b: u64 -> u64
-  asm "add @,@" a b
-  asm "mov rax,@" a
-
-proc naked add a: u32 b: u32 -> u32
-  asm "add @,@" a b
-  asm "mov eax,@" a
-
-proc naked add a: u16 b: u16 -> u16
-  asm "add @,@" a b
-  asm "mov ax,@" a
-
-proc naked add a: u8 b: u8 -> u8
-  asm "add @,@" a b
-  asm "mov al,@" a
-
-
-proc naked sub a: s64 b: s64 -> s64
-  asm "sub @,@" a b
-  asm "mov rax,@" a
-
-proc naked sub a: s32 b: s32 -> s32
-  asm "sub @,@" a b
-  asm "mov eax,@" a
-
-proc naked sub a: s16 b: s16 -> s16
-  asm "sub @,@" a b
-  asm "mov ax,@" a
-
-proc naked sub a: s8 b: s8 -> s8
-  asm "sub @,@" a b
-  asm "mov al,@" a
-
-proc naked sub a: u64 b: u64 -> u64
-  asm "sub @,@" a b
-  asm "mov rax,@" a
-
-proc naked sub a: u32 b: u32 -> u32
-  asm "sub @,@" a b
-  asm "mov eax,@" a
-
-proc naked sub a: u16 b: u16 -> u16
-  asm "sub @,@" a b
-  asm " mov ax,@" a
-
-proc naked sub a: u8 b: u8 -> u8
-  asm "sub @,@" a b
-  asm "mov al,@" a
-
-
-proc naked mul a: s64 b: s64 -> s64
+macro mul a b -> r
+  r = 0
   asm "mov rax,@" a
   asm "imul @" b
+  asm "mov @,rax" r
+end
 
-proc naked mul a: s32 b: s32 -> s32
-  asm "mov eax,@" a
-  asm "imul @" b
-
-proc naked mul a: s16 b: s16 -> s16
-  asm "mov ax,@" a
-  asm "imul @" b
-
-proc naked mul a: s8 b: s8 -> s8
-  asm "mov al,@" a
-  asm "imul @" b
-
-proc naked mul a: u64 b: u64 -> u64
-  asm "mov rax,@" a
-  asm "mul @" b
-
-proc naked mul a: u32 b: u32 -> u32
-  asm "mov eax,@" a
-  asm "mul @" b
-
-proc naked mul a: u16 b: u16 -> u16
-  asm "mov ax,@" a
-  asm "mul @" b
-
-proc naked mul a: u8 b: u8 -> u8
-  asm "mov al,@" a
-  asm "mul @" b
-
-
-proc naked div a: s64 b: s64 -> s64
+macro div a b -> r
+  r = 0
   asm "mov rax,@" a
   asm "cqo"
   asm "idiv @" b
+  asm "mov @,rax" r
+end
 
-proc naked div a: s32 b: s32 -> s32
-  asm "mov eax,@" a
-  asm "cdq"
-  asm "idiv @" b
-
-proc naked div a: s16 b: s16 -> s16
-  asm "mov ax,@" a
-  asm "cwd"
-  asm "idiv @" b
-
-proc naked div a: s8 b: s8 -> s8
-  asm "mov al,@" a
-  asm "cbw"
-  asm "idiv @" b
-
-proc naked div a: u64 b: u64 -> u64
-  asm "mov rax,@" a
-  asm "cqo"
-  asm "div @" b
-
-proc naked div a: u32 b: u32 -> u32
-  asm "mov eax,@" a
-  asm "cdq"
-  asm "div @" b
-
-proc naked div a: u16 b: u16 -> u16
-  asm "mov ax,@" a
-  asm "cwd"
-  asm "div @" b
-
-proc naked div a: u8 b: u8 -> u8
-  asm "mov al,@" a
-  asm "cbw"
-  asm "div @" b
-
-
-proc naked mod a: s64 b: s64 -> s64
+macro mod a b -> r
+  r = 0
   asm "mov rax,@" a
   asm "cqo"
   asm "idiv @" b
-  asm "mov rax,rdx"
+  asm "mov @,rdx" r
+end
 
-proc naked mod a: s32 b: s32 -> s32
-  asm "mov eax,@" a
-  asm "cdq"
-  asm "idiv @" b
-  asm "mov eax,edx"
+macro neg a -> r
+  r = a
+  asm "neg @" r
+end
 
-proc naked mod a: s16 b: s16 -> s16
-  asm "mov ax,@" a
-  asm "cwd"
-  asm "idiv @" b
-  asm "mov ax,dx"
+macro or a b -> r
+  r = a
+  asm "or @,@" r b
+end
 
-proc naked mod a: s8 b: s8 -> s8
-  asm "mov al,@" a
-  asm "cbw"
-  asm "idiv @" b
-  asm "mov al,dl"
+macro and a b -> r
+  r = a
+  asm "and @,@" r b
+end
 
-proc naked mod a: u64 b: u64 -> u64
-  asm "mov rax,@" a
-  asm "cqo"
-  asm "idiv @" b
-  asm "mov rax,rdx"
-
-proc naked mod a: u32 b: u32 -> u32
-  asm "mov eax,@" a
-  asm "cdq"
-  asm "idiv @" b
-  asm "mov eax,edx"
-
-proc naked mod a: u16 b: u16 -> u16
-  asm "mov ax,@" a
-  asm "cwd"
-  asm "idiv @" b
-  asm "mov ax,dx"
-
-proc naked mod a: u8 b: u8 -> u8
-  asm "mov al,@" a
-  asm "cbw"
-  asm "idiv @" b
-  asm "mov al,dl"
-
-
-proc neg num: s64 -> s64
-  asm "neg @" num
-  ret num
-
-proc neg num: s32 -> s32
-  asm "neg @" num
-  ret num
-
-proc neg num: s16 -> s16
-  asm "neg @" num
-  ret num
-
-proc neg num: s8 -> s8
-  asm "neg @" num
-  ret num
-
-proc neg num: u64 -> u64
-  asm "neg @" num
-  ret num
-
-proc neg num: u32 -> u32
-  asm "neg @" num
-  ret num
-
-proc neg num: u16 -> u16
-  asm "neg @" num
-  ret num
-
-proc neg num: u8 -> u8
-  asm "neg @" num
-  ret num
-
-
-
-proc or a: s64 b: s64 -> s64
-  asm "or @,@" a b
-  ret a
-
-proc or a: s32 b: s32 -> s32
-  asm "or @,@" a b
-  ret a
-
-proc or a: s16 b: s16 -> s16
-  asm "or @,@" a b
-  ret a
-
-proc or a: s8 b: s8 -> s8
-  asm "or @,@" a b
-  ret a
-
-proc or a: u64 b: u64 -> u64
-  asm "or @,@" a b
-  ret a
-
-proc or a: u32 b: u32 -> u32
-  asm "or @,@" a b
-  ret a
-
-proc or a: u16 b: u16 -> u16
-  asm "or @,@" a b
-  ret a
-
-proc or a: u8 b: u8 -> u8
-  asm "or @,@" a b
-  ret a
-
-
-proc and a: s64 b: s64 -> s64
-  asm "and @,@" a b
-  ret a
-
-proc and a: s32 b: s32 -> s32
-  asm "and @,@" a b
-  ret a
-
-proc and a: s16 b: s16 -> s16
-  asm "and @,@" a b
-  ret a
-
-proc and a: s8 b: s8 -> s8
-  asm "and @,@" a b
-  ret a
-
-proc and a: u64 b: u64 -> u64
-  asm "and @,@" a b
-  ret a
-
-proc and a: u32 b: u32 -> u32
-  asm "and @,@" a b
-  ret a
-
-proc and a: u16 b: u16 -> u16
-  asm "and @,@" a b
-  ret a
-
-proc and a: u8 b: u8 -> u8
-  asm "and @,@" a b
-  ret a
-
-
-proc xor a: s64 b: s64 -> s64
-  asm "xor @,@" a b
-  ret a
-
-proc xor a: s32 b: s32 -> s32
-  asm "xor @,@" a b
-  ret a
-
-proc xor a: s16 b: s16 -> s16
-  asm "xor @,@" a b
-  ret a
-
-proc xor a: s8 b: s8 -> s8
-  asm "xor @,@" a b
-  ret a
-
-proc xor a: u64 b: u64 -> u64
-  asm "xor @,@" a b
-  ret a
-
-proc xor a: u32 b: u32 -> u32
-  asm "xor @,@" a b
-  ret a
-
-proc xor a: u16 b: u16 -> u16
-  asm "xor @,@" a b
-  ret a
-
-proc xor a: u8 b: u8 -> u8
-  asm "xor @,@" a b
-  ret a
+macro xor a b -> r
+  r = a
+  asm "xor @,@" r b
+end

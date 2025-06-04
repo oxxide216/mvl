@@ -295,7 +295,8 @@ void collect_defs(Compiler *compiler) {
       macro.name = name->lexeme;
 
       for (u32 i = 0; i < compiler->macros.len; ++i) {
-        if (str_eq(compiler->macros.items[i].name, name->lexeme)) {
+        Macro *temp_macro = compiler->macros.items + i;
+        if (str_eq(temp_macro->name, macro.name)) {
           ERROR("Macro `"STR_FMT"` was redefined\n",
                 STR_ARG(name->lexeme));
           exit(1);

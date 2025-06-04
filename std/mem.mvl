@@ -5,20 +5,20 @@ static FLAGS = 0
 static FILDES = -1
 
 init
-  PROT = @or PROT_READ PROT_WRITE
-  FLAGS = @or MAP_PRIVATE MAP_ANONYMOUS
+  PROT = !or PROT_READ PROT_WRITE
+  FLAGS = !or MAP_PRIVATE MAP_ANONYMOUS
 
 proc malloc size: s64 -> s64
-  size = @add size 8
+  size = !add size 8
 
   ptr = @mmap 0 size PROT FLAGS FILDES 0
 
   *ptr = size
-  ptr = @add ptr 8
+  ptr = !add ptr 8
   ret ptr
 
 proc realloc ptr: s64 size: s64 -> s64
-  size_ptr = @sub ptr 8
+  size_ptr = !sub ptr 8
   size = *s64 size_ptr
 
   new_ptr = @malloc size
@@ -27,7 +27,7 @@ proc realloc ptr: s64 size: s64 -> s64
   ret new_ptr
 
 proc free ptr: s64
-  ptr = @sub ptr 8
+  ptr = !sub ptr 8
   size = *s64 ptr
   @munmap ptr size
 
@@ -40,9 +40,9 @@ proc memcopy dest: s64 src: s64 size: s64
     byte = *s8 src_ptr
     *dest_ptr = byte
 
-    i = @add i 1
-    dest_ptr = @add dest_ptr 1
-    src_ptr = @add src_ptr 1
+    i = !add i 1
+    dest_ptr = !add dest_ptr 1
+    src_ptr = !add src_ptr 1
   end
 
 proc memmove dest: s64 src: s64 size: s64
@@ -51,17 +51,17 @@ proc memmove dest: s64 src: s64 size: s64
   end
 
   if dest > src
-    i = @sub size 1
-    dest_ptr = @add dest i
-    src_ptr = @add src i
+    i = !sub size 1
+    dest_ptr = !add dest i
+    src_ptr = !add src i
 
     while i >= 0
       byte = *u8 src_ptr
       *dest_ptr = byte
 
-      i = @sub i 1
-      dest_ptr = @sub dest_ptr 1
-      src_ptr = @sub src_ptr 1
+      i = !sub i 1
+      dest_ptr = !sub dest_ptr 1
+      src_ptr = !sub src_ptr 1
     end
   else
     i = 0
@@ -72,8 +72,8 @@ proc memmove dest: s64 src: s64 size: s64
       byte = *u8 src_ptr
       *dest_ptr = byte
 
-      i = @add i 1
-      dest_ptr = @add dest_ptr 1
-      src_ptr = @add src_ptr 1
+      i = !add i 1
+      dest_ptr = !add dest_ptr 1
+      src_ptr = !add src_ptr 1
     end
   end

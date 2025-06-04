@@ -30,7 +30,7 @@ proc input -> s64
 proc input fd: s64 -> s64
   buf_cap = 16
   buf_size = 0
-  size_to_alloc = @add buf_cap 1
+  size_to_alloc = !add buf_cap 1
   buf = @malloc size_to_alloc
 
   while 1 == 1
@@ -43,14 +43,14 @@ proc input fd: s64 -> s64
     end
 
     if buf_size >= buf_cap
-      buf_cap = @mul buf_cap 2
-      size_to_alloc = @add buf_cap 1
+      buf_cap = !mul buf_cap 2
+      size_to_alloc = !add buf_cap 1
       buf = @realloc buf size_to_alloc
     end
 
-    next_ptr = @add buf buf_size
+    next_ptr = !add buf buf_size
     *next_ptr = char
-    buf_size = @add buf_size 1
+    buf_size = !add buf_size 1
   end
 
   ret buf
@@ -81,8 +81,8 @@ proc inputl fd: s64 buf: s64 size: s64 -> s64
   ret len
 
 proc open path: s64 -> s64
-  flags = @or O_RDWR O_CREAT
-  flags = @or flags O_TRUNC
-  mode = @or S_IRUSR S_IWUSR
+  flags = !or O_RDWR O_CREAT
+  flags = !or flags O_TRUNC
+  mode = !or S_IRUSR S_IWUSR
   t = @openat AT_FDCWD path flags mode
   ret t
