@@ -27,6 +27,7 @@ static Str token_id_names[] = {
   STR_LIT("`naked`"),
   STR_LIT("`init`"),
   STR_LIT("`cast`"),
+  STR_LIT("`macro`"),
   STR_LIT("identifier"),
   STR_LIT("number"),
   STR_LIT("`(`"),
@@ -44,6 +45,7 @@ static Str token_id_names[] = {
   STR_LIT("`->`"),
   STR_LIT("'&'"),
   STR_LIT("`*`"),
+  STR_LIT("`!`"),
 };
 
 Token *parser_peek_token(Parser *parser) {

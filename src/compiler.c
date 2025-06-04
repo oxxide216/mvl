@@ -38,10 +38,19 @@ typedef struct {
 typedef Da(Block) Blocks;
 
 typedef struct {
+  Str     name;
+  Da(Str) arg_names;
+  Tokens  tokens;
+} Macro;
+
+typedef Da(Macro) Macros;
+
+typedef struct {
   Program            *program;
   Parser              parser;
   VariableKinds       var_kinds;
   DefinedProcedures   procs;
+  Macros              macros;
   u32                 static_segments_count;
 } Compiler;
 
@@ -279,10 +288,141 @@ void collect_defs(Compiler *compiler) {
       ValueKind value_kind = str_to_number_value(value_token->lexeme).kind;
       VariableKind var_kind = { name_token->lexeme, value_kind };
       DA_APPEND(compiler->var_kinds.static_kinds, var_kind);
+    } else if (token->id == TT_MACRO) {
+      Macro macro = {0};
+
+      Token *name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+      macro.name = name->lexeme;
+
+      for (u32 i = 0; i < compiler->macros.len; ++i) {
+        if (str_eq(compiler->macros.items[i].name, name->lexeme)) {
+          ERROR("Macro `"STR_FMT"` was redefined\n",
+                STR_ARG(name->lexeme));
+          exit(1);
+        }
+      }
+
+      Token *next = parser_peek_token(&compiler->parser);
+      while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
+        Token *arg_name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+        DA_APPEND(macro.arg_names, arg_name->lexeme);
+
+        next = parser_peek_token(&compiler->parser);
+      }
+
+      parser_next_token(&compiler->parser);
+
+      if (next->id == TT_RIGHT_ARROW) {
+        Token *ret_val_name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+        DA_APPEND(macro.arg_names, ret_val_name->lexeme);
+
+        parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
+      }
+
+      u32 recursion_level = 1;
+
+      while (parser_peek_token(&compiler->parser)) {
+        Token *token = parser_next_token(&compiler->parser);
+
+        if (token->id == TT_IF || token->id == TT_WHILE) {
+          ++recursion_level;
+        } else if (token->id == TT_END) {
+          if (--recursion_level == 0)
+            break;
+        }
+
+        DA_APPEND(macro.tokens, *token);
+      }
+
+      if (recursion_level > 0) {
+        ERROR("Unclosed `"STR_FMT"` macro definition\n",
+              STR_ARG(name->lexeme));
+        exit(1);
+      }
+
+      DA_APPEND(compiler->macros, macro);
     }
   }
 
   compiler->parser.index = 0;
+}
+
+Macro *get_macro(Macros *macros, Str name) {
+  for (u32 i = 0; i < macros->len; ++i)
+    if (str_eq(macros->items[i].name, name))
+      return macros->items + i;
+
+  ERROR("`"STR_FMT"` macro was not found\n",
+        STR_ARG(name));
+  exit(1);
+}
+
+void expand_macro(Macro *macro, Parser *parser, u32 prev_index, Tokens *args) {
+  Tokens *tokens = &parser->tokens;
+  u32 index = parser->index;
+
+  if (prev_index + macro->tokens.len >= tokens->cap) {
+    u32 new_cap;
+
+    if (tokens->cap == 0) {
+      new_cap = macro->tokens.len;
+
+      tokens->items = malloc(new_cap * sizeof(Token));
+    } else {
+      new_cap = 1;
+      while (prev_index + macro->tokens.len >= new_cap)
+        new_cap *= 2;
+
+      tokens->items = realloc(tokens->items, new_cap * sizeof(Token));
+    }
+
+    tokens->cap = new_cap;
+  }
+
+  memmove(tokens->items + prev_index + macro->tokens.len,
+          tokens->items + index,
+          (tokens->len - index) * sizeof(Token));
+
+  memcpy(tokens->items + prev_index,
+         macro->tokens.items,
+         macro->tokens.len * sizeof(Token));
+
+  tokens->len += macro->tokens.len + prev_index - index;
+  parser->index = prev_index;
+
+  for (u32 i = 0; i < macro->tokens.len; ++i) {
+    Token *token = tokens->items + prev_index + i;
+
+    if (token->id == TT_IDENT) {
+      for (u32 j = 0; j < macro->arg_names.len; ++j) {
+        if (str_eq(token->lexeme, macro->arg_names.items[j])) {
+          *token = args->items[j];
+          break;
+        }
+      }
+    }
+  }
+}
+
+void compile_macro_call(Compiler *compiler, Token *dest, u32 prev_index) {
+  Token *name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+  Tokens args = {0};
+
+  Token *next = parser_peek_token(&compiler->parser);
+  while (next && next->id != TT_NEWLINE) {
+    Token *arg = parser_next_token(&compiler->parser);
+    DA_APPEND(args, *arg);
+
+    next = parser_peek_token(&compiler->parser);
+  }
+
+  parser_next_token(&compiler->parser);
+
+  if (dest)
+    DA_APPEND(args, *dest);
+
+  Macro *macro = get_macro(&compiler->macros, name->lexeme);
+  expand_macro(macro, &compiler->parser, prev_index, &args);
 }
 
 void compile(Tokens tokens, Program *program) {
@@ -318,17 +458,22 @@ void compile(Tokens tokens, Program *program) {
                                                          MASK(TT_STATIC) |
                                                          MASK(TT_ASM) |
                                                          MASK(TT_INIT) |
-                                                         MASK(TT_DEREF));
+                                                         MASK(TT_DEREF) |
+                                                         MASK(TT_MACRO) |
+                                                         MASK(TT_MACRO_CALL));
 
     if (token->id != TT_PROC &&
         token->id != TT_NEWLINE &&
         token->id != TT_INCLUDE &&
         token->id != TT_STATIC &&
         token->id != TT_INIT &&
+        token->id != TT_MACRO &&
         proc == NULL) {
       ERROR("Every instruction should be inside of a procedure\n");
       exit(1);
     }
+
+    bool expect_new_line = true;
 
     switch (token->id) {
     case TT_NEWLINE: {
@@ -510,6 +655,8 @@ void compile(Tokens tokens, Program *program) {
 
 
     case TT_IDENT: {
+      u32 prev_index = compiler.parser.index - 1;
+
       Token *next = parser_expect_token(&compiler.parser, MASK(TT_PUT) |
                                                           MASK(TT_COLON));
       if (next->id == TT_COLON) {
@@ -563,6 +710,14 @@ void compile(Tokens tokens, Program *program) {
         break;
       }
 
+      if (next && next->id == TT_MACRO_CALL) {
+        parser_next_token(&compiler.parser);
+        compile_macro_call(&compiler, token, prev_index);
+        expect_new_line = false;
+
+        break;
+      }
+
       Arg arg = compile_arg(&compiler);
 
       ValueKind param_kind = compiler_get_arg_kind(&compiler, &arg, proc);
@@ -613,13 +768,56 @@ void compile(Tokens tokens, Program *program) {
       proc_ref_assign(proc, dest_token->lexeme, arg);
     } break;
 
+    case TT_MACRO: {
+      Token *name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+
+      Token *next = parser_peek_token(&compiler.parser);
+      while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
+        parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+
+        next = parser_peek_token(&compiler.parser);
+      }
+
+      parser_next_token(&compiler.parser);
+
+      if (next->id == TT_RIGHT_ARROW) {
+        parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        parser_expect_token(&compiler.parser, MASK(TT_NEWLINE));
+      }
+
+      u32 recursion_level = 1;
+
+      while (parser_peek_token(&compiler.parser)) {
+        Token *token = parser_next_token(&compiler.parser);
+
+        if (token->id == TT_IF || token->id == TT_WHILE) {
+          ++recursion_level;
+        } else if (token->id == TT_END) {
+          if (--recursion_level == 0)
+            break;
+        }
+      }
+
+      if (recursion_level > 0) {
+        ERROR("Unclosed `"STR_FMT"` macro definition\n",
+              STR_ARG(name->lexeme));
+        exit(1);
+      }
+    } break;
+
+    case TT_MACRO_CALL: {
+      u32 prev_index = compiler.parser.index - 1;
+      compile_macro_call(&compiler, NULL, prev_index);
+      expect_new_line = false;
+    } break;
+
     default: {
       ERROR("Unexpected token id\n");
       exit(1);
     }
     }
 
-    if (parser_peek_token(&compiler.parser))
+    if (expect_new_line && parser_peek_token(&compiler.parser))
       parser_expect_token(&compiler.parser, MASK(TT_NEWLINE));
   }
 
