@@ -1,190 +1,190 @@
-proc add a: s64 b: s64 -> s64
+proc naked add a: s64 b: s64 -> s64
   asm "add @,@" a b
-  asm noret "mov rax,@" a
-
-proc add a: s32 b: s32 -> s32
-  asm "add @,@" a b
-  asm noret "mov eax,@" a
-
-proc add a: s16 b: s16 -> s16
-  asm "add @,@" a b
-  asm noret "mov ax,@" a
-
-proc add a: s8 b: s8 -> s8
-  asm "add @,@" a b
-  asm noret "mov al,@" a
-
-proc add a: u64 b: u64 -> u64
-  asm "add @,@" a b
-  asm noret "mov rax,@" a
-
-proc add a: u32 b: u32 -> u32
-  asm "add @,@" a b
-  asm noret "mov eax,@" a
-
-proc add a: u16 b: u16 -> u16
-  asm "add @,@" a b
-  asm noret "mov ax,@" a
-
-proc add a: u8 b: u8 -> u8
-  asm "add @,@" a b
-  asm noret "mov al,@" a
-
-
-proc sub a: s64 b: s64 -> s64
-  asm "sub @,@" a b
-  asm noret "mov rax,@" a
-
-proc sub a: s32 b: s32 -> s32
-  asm "sub @,@" a b
-  asm noret "mov eax,@" a
-
-proc sub a: s16 b: s16 -> s16
-  asm "sub @,@" a b
-  asm noret "mov ax,@" a
-
-proc sub a: s8 b: s8 -> s8
-  asm "sub @,@" a b
-  asm noret "mov al,@" a
-
-proc sub a: u64 b: u64 -> u64
-  asm "sub @,@" a b
-  asm noret "mov rax,@" a
-
-proc sub a: u32 b: u32 -> u32
-  asm "sub @,@" a b
-  asm noret "mov eax,@" a
-
-proc sub a: u16 b: u16 -> u16
-  asm "sub @,@" a b
-  asm noret " mov ax,@" a
-
-proc sub a: u8 b: u8 -> u8
-  asm "sub @,@" a b
-  asm noret "mov al,@" a
-
-
-proc mul a: s64 b: s64 -> s64
   asm "mov rax,@" a
-  asm noret "imul @" b
 
-proc mul a: s32 b: s32 -> s32
+proc naked add a: s32 b: s32 -> s32
+  asm "add @,@" a b
   asm "mov eax,@" a
-  asm noret "imul @" b
 
-proc mul a: s16 b: s16 -> s16
+proc naked add a: s16 b: s16 -> s16
+  asm "add @,@" a b
   asm "mov ax,@" a
-  asm noret "imul @" b
 
-proc mul a: s8 b: s8 -> s8
+proc naked add a: s8 b: s8 -> s8
+  asm "add @,@" a b
   asm "mov al,@" a
-  asm noret "imul @" b
 
-proc mul a: u64 b: u64 -> u64
+proc naked add a: u64 b: u64 -> u64
+  asm "add @,@" a b
   asm "mov rax,@" a
-  asm noret "mul @" b
 
-proc mul a: u32 b: u32 -> u32
+proc naked add a: u32 b: u32 -> u32
+  asm "add @,@" a b
   asm "mov eax,@" a
-  asm noret "mul @" b
 
-proc mul a: u16 b: u16 -> u16
+proc naked add a: u16 b: u16 -> u16
+  asm "add @,@" a b
   asm "mov ax,@" a
-  asm noret "mul @" b
 
-proc mul a: u8 b: u8 -> u8
+proc naked add a: u8 b: u8 -> u8
+  asm "add @,@" a b
   asm "mov al,@" a
-  asm noret "mul @" b
 
 
-proc div a: s64 b: s64 -> s64
+proc naked sub a: s64 b: s64 -> s64
+  asm "sub @,@" a b
   asm "mov rax,@" a
-  asm "cqo"
-  asm noret "idiv @" b
 
-proc div a: s32 b: s32 -> s32
+proc naked sub a: s32 b: s32 -> s32
+  asm "sub @,@" a b
   asm "mov eax,@" a
-  asm "cdq"
-  asm noret "idiv @" b
 
-proc div a: s16 b: s16 -> s16
+proc naked sub a: s16 b: s16 -> s16
+  asm "sub @,@" a b
   asm "mov ax,@" a
-  asm "cwd"
-  asm noret "idiv @" b
 
-proc div a: s8 b: s8 -> s8
+proc naked sub a: s8 b: s8 -> s8
+  asm "sub @,@" a b
   asm "mov al,@" a
-  asm "cbw"
-  asm noret "idiv @" b
 
-proc div a: u64 b: u64 -> u64
+proc naked sub a: u64 b: u64 -> u64
+  asm "sub @,@" a b
   asm "mov rax,@" a
-  asm "cqo"
-  asm noret "div @" b
 
-proc div a: u32 b: u32 -> u32
+proc naked sub a: u32 b: u32 -> u32
+  asm "sub @,@" a b
   asm "mov eax,@" a
-  asm "cdq"
-  asm noret "div @" b
 
-proc div a: u16 b: u16 -> u16
-  asm "mov ax,@" a
-  asm "cwd"
-  asm noret "div @" b
+proc naked sub a: u16 b: u16 -> u16
+  asm "sub @,@" a b
+  asm " mov ax,@" a
 
-proc div a: u8 b: u8 -> u8
+proc naked sub a: u8 b: u8 -> u8
+  asm "sub @,@" a b
   asm "mov al,@" a
-  asm "cbw"
-  asm noret "div @" b
 
 
-proc mod a: s64 b: s64 -> s64
+proc naked mul a: s64 b: s64 -> s64
+  asm "mov rax,@" a
+  asm "imul @" b
+
+proc naked mul a: s32 b: s32 -> s32
+  asm "mov eax,@" a
+  asm "imul @" b
+
+proc naked mul a: s16 b: s16 -> s16
+  asm "mov ax,@" a
+  asm "imul @" b
+
+proc naked mul a: s8 b: s8 -> s8
+  asm "mov al,@" a
+  asm "imul @" b
+
+proc naked mul a: u64 b: u64 -> u64
+  asm "mov rax,@" a
+  asm "mul @" b
+
+proc naked mul a: u32 b: u32 -> u32
+  asm "mov eax,@" a
+  asm "mul @" b
+
+proc naked mul a: u16 b: u16 -> u16
+  asm "mov ax,@" a
+  asm "mul @" b
+
+proc naked mul a: u8 b: u8 -> u8
+  asm "mov al,@" a
+  asm "mul @" b
+
+
+proc naked div a: s64 b: s64 -> s64
   asm "mov rax,@" a
   asm "cqo"
   asm "idiv @" b
-  asm noret "mov rax,rdx"
 
-proc mod a: s32 b: s32 -> s32
+proc naked div a: s32 b: s32 -> s32
   asm "mov eax,@" a
   asm "cdq"
   asm "idiv @" b
-  asm noret "mov eax,edx"
 
-proc mod a: s16 b: s16 -> s16
+proc naked div a: s16 b: s16 -> s16
   asm "mov ax,@" a
   asm "cwd"
   asm "idiv @" b
-  asm noret "mov ax,dx"
 
-proc mod a: s8 b: s8 -> s8
+proc naked div a: s8 b: s8 -> s8
   asm "mov al,@" a
   asm "cbw"
   asm "idiv @" b
-  asm noret "mov al,dl"
 
-proc mod a: u64 b: u64 -> u64
+proc naked div a: u64 b: u64 -> u64
+  asm "mov rax,@" a
+  asm "cqo"
+  asm "div @" b
+
+proc naked div a: u32 b: u32 -> u32
+  asm "mov eax,@" a
+  asm "cdq"
+  asm "div @" b
+
+proc naked div a: u16 b: u16 -> u16
+  asm "mov ax,@" a
+  asm "cwd"
+  asm "div @" b
+
+proc naked div a: u8 b: u8 -> u8
+  asm "mov al,@" a
+  asm "cbw"
+  asm "div @" b
+
+
+proc naked mod a: s64 b: s64 -> s64
   asm "mov rax,@" a
   asm "cqo"
   asm "idiv @" b
-  asm noret "mov rax,rdx"
+  asm "mov rax,rdx"
 
-proc mod a: u32 b: u32 -> u32
+proc naked mod a: s32 b: s32 -> s32
   asm "mov eax,@" a
   asm "cdq"
   asm "idiv @" b
-  asm noret "mov eax,edx"
+  asm "mov eax,edx"
 
-proc mod a: u16 b: u16 -> u16
+proc naked mod a: s16 b: s16 -> s16
   asm "mov ax,@" a
   asm "cwd"
   asm "idiv @" b
-  asm noret "mov ax,dx"
+  asm "mov ax,dx"
 
-proc mod a: u8 b: u8 -> u8
+proc naked mod a: s8 b: s8 -> s8
   asm "mov al,@" a
   asm "cbw"
   asm "idiv @" b
-  asm noret "mov al,dl"
+  asm "mov al,dl"
+
+proc naked mod a: u64 b: u64 -> u64
+  asm "mov rax,@" a
+  asm "cqo"
+  asm "idiv @" b
+  asm "mov rax,rdx"
+
+proc naked mod a: u32 b: u32 -> u32
+  asm "mov eax,@" a
+  asm "cdq"
+  asm "idiv @" b
+  asm "mov eax,edx"
+
+proc naked mod a: u16 b: u16 -> u16
+  asm "mov ax,@" a
+  asm "cwd"
+  asm "idiv @" b
+  asm "mov ax,dx"
+
+proc naked mod a: u8 b: u8 -> u8
+  asm "mov al,@" a
+  asm "cbw"
+  asm "idiv @" b
+  asm "mov al,dl"
 
 
 proc neg num: s64 -> s64

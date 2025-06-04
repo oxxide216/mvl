@@ -24,7 +24,7 @@ static Str token_id_names[] = {
   STR_LIT("`include`"),
   STR_LIT("`static`"),
   STR_LIT("`asm`"),
-  STR_LIT("`noret`"),
+  STR_LIT("`naked`"),
   STR_LIT("`init`"),
   STR_LIT("`cast`"),
   STR_LIT("identifier"),
@@ -109,6 +109,7 @@ void expect_token(Token *token, u64 id_mask) {
   fputs(", but got ", stderr);
   print_id_mask(MASK(token->id), token->lexeme, stderr);
   fputc('\n', stderr);
+
   exit(1);
 }
 

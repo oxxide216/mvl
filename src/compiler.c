@@ -243,7 +243,12 @@ void collect_defs(Compiler *compiler) {
     Token *token = parser_next_token(&compiler->parser);
 
     if (token->id == TT_PROC) {
-      Token *name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+      Token *name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT) |
+                                                                 MASK(TT_NAKED));
+
+      if (name_token->id == TT_NAKED)
+        name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+
       ValueKind ret_val_kind = ValueKindUnit;
       ParamKinds param_kinds = {0};
 
@@ -286,7 +291,8 @@ void compile(Tokens tokens, Program *program) {
   compiler.parser.tokens = tokens;
 
   Procedure *proc = program_push_proc(program, STR_LIT("@init"),
-                                      ValueKindUnit, (ProcParams) {0});
+                                      ValueKindUnit, (ProcParams) {0},
+                                      false);
 
   u32 current_proc_id = define_proc(&compiler, STR_LIT("@init"),
                                     ValueKindUnit, (ParamKinds) {0});
@@ -335,7 +341,13 @@ void compile(Tokens tokens, Program *program) {
         exit(1);
       }
 
-      Token *name_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+      Token *name_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT) |
+                                                                MASK(TT_NAKED));
+
+      bool is_naked = name_token->id == TT_NAKED;
+      if (is_naked)
+        name_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+
       ValueKind ret_val_kind = ValueKindUnit;
       ProcParams params = {0};
       ParamKinds param_kinds = {0};
@@ -369,7 +381,7 @@ void compile(Tokens tokens, Program *program) {
       current_proc_id = define_proc(&compiler, name_token->lexeme,
                                     ret_val_kind, param_kinds);
       Str name = get_proc_hashed_name(&compiler, current_proc_id);
-      proc = program_push_proc(program, name, ret_val_kind, params);
+      proc = program_push_proc(program, name, ret_val_kind, params, is_naked);
     } break;
 
     case TT_IF:
@@ -578,13 +590,7 @@ void compile(Tokens tokens, Program *program) {
     } break;
 
     case TT_ASM: {
-      Token *text = parser_expect_token(&compiler.parser, MASK(TT_STR_LIT) |
-                                                          MASK(TT_NORET));
-
-      bool no_return = text->id == TT_NORET;
-
-      if (no_return)
-        text = parser_expect_token(&compiler.parser, MASK(TT_STR_LIT));
+      Token *text = parser_expect_token(&compiler.parser, MASK(TT_STR_LIT));
 
       Args args = {0};
       while (parser_peek_token(&compiler.parser) &&
@@ -593,7 +599,7 @@ void compile(Tokens tokens, Program *program) {
         args_push_arg(&args, arg);
       }
 
-      proc_inline_asm(proc, text->lexeme, args, no_return);
+      proc_inline_asm(proc, text->lexeme, args);
     } break;
 
     case TT_INIT: {
