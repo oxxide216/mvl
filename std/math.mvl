@@ -1,17 +1,17 @@
 macro add a b -> r
   r = a
-  asm "mov @,@" r b
+  asm "add @,@@" r b
 end
 
 macro sub a b -> r
   r = a
-  asm "mov @,@" r b
+  asm "sub @,@@" r b
 end
 
 macro mul a b -> r
   r = 0
   asm "mov rax,@" a
-  asm "imul @" b
+  asm "imul @@" b
   asm "mov @,rax" r
 end
 
@@ -19,7 +19,7 @@ macro div a b -> r
   r = 0
   asm "mov rax,@" a
   asm "cqo"
-  asm "idiv @" b
+  asm "idiv @@" b
   asm "mov @,rax" r
 end
 
@@ -27,7 +27,7 @@ macro mod a b -> r
   r = 0
   asm "mov rax,@" a
   asm "cqo"
-  asm "idiv @" b
+  asm "idiv @@" b
   asm "mov @,rdx" r
 end
 
@@ -38,15 +38,15 @@ end
 
 macro or a b -> r
   r = a
-  asm "or @,@" r b
+  asm "or @,@@" r b
 end
 
 macro and a b -> r
   r = a
-  asm "and @,@" r b
+  asm "and @,@@" r b
 end
 
 macro xor a b -> r
   r = a
-  asm "xor @,@" r b
+  asm "xor @,@@" r b
 end

@@ -747,16 +747,51 @@ void compile(Tokens tokens, Program *program) {
     } break;
 
     case TT_ASM: {
-      Token *text = parser_expect_token(&compiler.parser, MASK(TT_STR_LIT));
+      Token *text_token = parser_expect_token(&compiler.parser, MASK(TT_STR_LIT));
 
-      Args args = {0};
+      Da(Arg) args = {0};
       while (parser_peek_token(&compiler.parser) &&
              parser_peek_token(&compiler.parser)->id != TT_NEWLINE) {
         Arg arg = compile_arg(&compiler);
-        args_push_arg(&args, arg);
+        DA_APPEND(args, arg);
       }
 
-      proc_inline_asm(proc, text->lexeme, args);
+      InlineAsmSegments segments = {0};
+
+      u32 arg_index = 0;
+      Str text = { text_token->lexeme.ptr, 0 };
+      for (u32 i = 0; i < text_token->lexeme.len; ++i) {
+        if (text_token->lexeme.ptr[i] == '@') {
+          if (arg_index >= args.len) {
+            ERROR(STR_FMT": Not enough arguments in inline assembly\n",
+                  STR_ARG(proc->name));
+            exit(1);
+          }
+
+          if (text.len > 0)
+            segments_push_text(&segments, text);
+
+          bool is_high_priority_var = false;
+          if (i + 1 < text_token->lexeme.len &&
+              text_token->lexeme.ptr[i + 1] == '@') {
+            is_high_priority_var = true;
+            ++i;
+          }
+
+          segments_push_arg(&segments, args.items[arg_index++],
+                            is_high_priority_var);
+
+          text.ptr = text_token->lexeme.ptr + i + 1;
+          text.len = 0;
+        } else {
+          ++text.len;
+        }
+      }
+
+      if (text.len > 0)
+        segments_push_text(&segments, text);
+
+      proc_inline_asm(proc, segments);
     } break;
 
     case TT_INIT: {
