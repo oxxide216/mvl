@@ -361,8 +361,9 @@ Macro *get_macro(Macros *macros, Str name) {
 void expand_macro(Macro *macro, Parser *parser, u32 prev_index, Tokens *args) {
   Tokens *tokens = &parser->tokens;
   u32 index = parser->index;
+  u32 inserted_tokens_len = macro->tokens.len + prev_index - index;
 
-  if (prev_index + macro->tokens.len >= tokens->cap) {
+  if (tokens->len + inserted_tokens_len >= tokens->cap) {
     u32 new_cap;
 
     if (tokens->cap == 0) {
@@ -371,7 +372,7 @@ void expand_macro(Macro *macro, Parser *parser, u32 prev_index, Tokens *args) {
       tokens->items = malloc(new_cap * sizeof(Token));
     } else {
       new_cap = 1;
-      while (prev_index + macro->tokens.len >= new_cap)
+      while (tokens->len + inserted_tokens_len >= new_cap)
         new_cap *= 2;
 
       tokens->items = realloc(tokens->items, new_cap * sizeof(Token));
@@ -388,7 +389,7 @@ void expand_macro(Macro *macro, Parser *parser, u32 prev_index, Tokens *args) {
          macro->tokens.items,
          macro->tokens.len * sizeof(Token));
 
-  tokens->len += macro->tokens.len + prev_index - index;
+  tokens->len += inserted_tokens_len;
   parser->index = prev_index;
 
   for (u32 i = 0; i < macro->tokens.len; ++i) {
