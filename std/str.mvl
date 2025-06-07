@@ -45,19 +45,19 @@ proc s64_to_str num: s64 -> s64
 
   while 1 == 1
     if buf_size >= buf_cap
-      buf_cap = !mul buf_cap 2
+      buf_cap = !smul buf_cap 2
       size_to_alloc = !add buf_cap 1
       buf = @realloc buf size_to_alloc
     end
 
-    digit = !mod num 10
+    digit = !smod num 10
     char = !add digit '0'
     char_s8 = cast s8 char
 
     ptr = !add buf buf_size
     *ptr = char_s8
 
-    num = !div num 10
+    num = !sdiv num 10
     buf_size = !add buf_size 1
 
     if num == 0
@@ -125,7 +125,7 @@ proc str_to_s64 str: s64 -> s64
     _digit = !sub char 0s8
     digit = cast s64 _digit
 
-    num = !mul num 10
+    num = !smul num 10
     num = !add num digit
 
     i = !add i 1

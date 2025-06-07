@@ -43,7 +43,7 @@ proc input fd: s64 -> s64
     end
 
     if buf_size >= buf_cap
-      buf_cap = !mul buf_cap 2
+      buf_cap = !smul buf_cap 2
       size_to_alloc = !add buf_cap 1
       buf = @realloc buf size_to_alloc
     end
