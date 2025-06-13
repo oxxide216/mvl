@@ -55,7 +55,7 @@ int main(i32 argv, i8 **argc) {
 
   Str file_path = str_new(argc[2]);
 
-  Tokens tokens;
+  Tokens tokens = {0};
   lex(text, &tokens, file_path);
 
   Da(Str) included_file_paths = {0};
