@@ -56,8 +56,12 @@ void lex(Str text, Tokens *tokens, Str file_path) {
     Str lexeme = table_matches(table, &text, &token_id);
 
     if (token_id == (u64) -1) {
-      PERROR(STR_FMT":%u:%u: ", "unexpected `%c`\n",
-             STR_ARG(file_path), row + 1, col + 1, text.ptr[0]);
+      if (text.len == 0)
+              PERROR(STR_FMT":%u:%u: ", "unexpected EOF\n",
+             STR_ARG(file_path), row + 1, col + 1);
+      else
+        PERROR(STR_FMT":%u:%u: ", "unexpected `%c`\n",
+               STR_ARG(file_path), row + 1, col + 1, text.ptr[0]);
       exit(1);
     }
 
