@@ -134,6 +134,9 @@ ArgKind token_id_to_arg_kind(u64 id) {
 }
 
 ValueKind str_to_value_kind(Str str) {
+  if (str_eq(str, STR_LIT("unit")))
+    return ValueKindUnit;
+
   if (str_eq(str, STR_LIT("s64")))
     return ValueKindS64;
 

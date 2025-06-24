@@ -8,21 +8,21 @@ macro sub a b -> r
   asm "sub @,@@" r b
 end
 
-macro smul a b -> r
+macro mul a: s64 b: s64 -> r
   r = a
   asm "mov rax,@" a
   asm "imul @@" b
   asm "mov @,rax" r
 end
 
-macro umul a b -> r
+macro mul a: u64 b: u64 -> r
   r = a
   asm "mov rax,@" a
   asm "mul @@" b
   asm "mov @,rax" r
 end
 
-macro sdiv a b -> r
+macro div a: s64 b: s64 -> r
   r = a
   asm "mov rax,@" a
   asm "cqo"
@@ -30,7 +30,7 @@ macro sdiv a b -> r
   asm "mov @,rax" r
 end
 
-macro udiv a b -> r
+macro div a: u64 b: u64 -> r
   r = a
   asm "mov rax,@" a
   asm "cqo"
@@ -38,7 +38,7 @@ macro udiv a b -> r
   asm "mov @,rax" r
 end
 
-macro smod a b -> r
+macro mod a: s64 b: s64 -> r
   r = a
   asm "mov rax,@" a
   asm "cqo"
@@ -46,7 +46,7 @@ macro smod a b -> r
   asm "mov @,rdx" r
 end
 
-macro umod a b -> r
+macro mod a: u64 b: u64 -> r
   r = a
   asm "mov rax,@" a
   asm "cqo"

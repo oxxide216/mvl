@@ -46,6 +46,7 @@ typedef Da(MacroParam) MacroParams;
 
 typedef struct {
   Str         name;
+  Str         ret_val_var;
   MacroParams params;
   Tokens      tokens;
 } Macro;
@@ -252,18 +253,21 @@ static void compile_call(Compiler *compiler, Str dest,
   }
 }
 
-bool macro_sign_eq(Macro *macro, Str name, ParamKinds param_kinds) {
+bool macro_sign_eq(Macro *macro, Str name, ParamKinds param_kinds, Str ret_val_var) {
   if (!str_eq(macro->name, name))
     return false;
 
   if (macro->params.len != param_kinds.len)
     return false;
 
+  if (!!macro->ret_val_var.len != !!ret_val_var.len)
+    return false;
+
   for (u32 i = 0; i < macro->params.len; ++i) {
     ValueKind macro_param_kind = macro->params.items[i].kind;
     ValueKind param_kind = param_kinds.items[i];
 
-    if (macro_param_kind != param_kind)
+    if (macro_param_kind != param_kind && macro_param_kind != ValueKindUnit)
       return false;
   }
 
@@ -322,10 +326,16 @@ void collect_defs(Compiler *compiler) {
       Token *next = parser_peek_token(&compiler->parser);
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
         Token *param_name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
-        parser_expect_token(&compiler->parser, MASK(TT_COLON));
-        Token *param_kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
 
-        ValueKind param_kind = str_to_value_kind(param_kind_token->lexeme);
+        ValueKind param_kind = ValueKindUnit;
+        if (parser_peek_token(&compiler->parser) &&
+            parser_peek_token(&compiler->parser)->id == TT_COLON) {
+          parser_next_token(&compiler->parser);
+          Token *param_kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+
+          param_kind = str_to_value_kind(param_kind_token->lexeme);
+        }
+
         MacroParam param = { param_name_token->lexeme, param_kind };
         DA_APPEND(macro.params, param);
 
@@ -335,11 +345,8 @@ void collect_defs(Compiler *compiler) {
       parser_next_token(&compiler->parser);
 
       if (next->id == TT_RIGHT_ARROW) {
-        Token *ret_val_kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
-
-        ValueKind param_kind = str_to_value_kind(ret_val_kind_token->lexeme);
-        MacroParam param = { STR_LIT("@ret_val"), param_kind };
-        DA_APPEND(macro.params, param);
+        Token *ret_val_var_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+        macro.ret_val_var = ret_val_var_token->lexeme;
 
         parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
       }
@@ -353,7 +360,7 @@ void collect_defs(Compiler *compiler) {
 
       for (u32 i = 0; i < compiler->macros.len; ++i) {
         Macro *temp_macro = compiler->macros.items + i;
-        if (macro_sign_eq(temp_macro, macro.name, param_kinds)) {
+        if (macro_sign_eq(temp_macro, macro.name, param_kinds, macro.ret_val_var)) {
           ERROR("Macro `"STR_FMT"` was redefined\n",
                 STR_ARG(name->lexeme));
           exit(1);
@@ -388,9 +395,9 @@ void collect_defs(Compiler *compiler) {
   compiler->parser.index = 0;
 }
 
-Macro *get_macro(Macros *macros, Str name, ParamKinds param_kinds) {
+Macro *get_macro(Macros *macros, Str name, ParamKinds param_kinds, Str ret_val_var) {
   for (u32 i = 0; i < macros->len; ++i)
-    if (macro_sign_eq(macros->items + i, name, param_kinds))
+    if (macro_sign_eq(macros->items + i, name, param_kinds, ret_val_var))
       return macros->items + i;
 
   ERROR("`"STR_FMT"` macro was not found\n",
@@ -398,7 +405,8 @@ Macro *get_macro(Macros *macros, Str name, ParamKinds param_kinds) {
   exit(1);
 }
 
-void expand_macro(Macro *macro, Parser *parser, u32 prev_index, Tokens *args) {
+void expand_macro(Macro *macro, Parser *parser, u32 prev_index,
+                  Str ret_val_var, Tokens *args) {
   Tokens *tokens = &parser->tokens;
   u32 index = parser->index;
   u32 inserted_tokens_len = macro->tokens.len + prev_index - index;
@@ -436,6 +444,9 @@ void expand_macro(Macro *macro, Parser *parser, u32 prev_index, Tokens *args) {
     Token *token = tokens->items + prev_index + i;
 
     if (token->id == TT_IDENT) {
+      if (str_eq(token->lexeme, macro->ret_val_var))
+        token->lexeme = ret_val_var;
+
       for (u32 j = 0; j < macro->params.len; ++j) {
         if (str_eq(token->lexeme, macro->params.items[j].name)) {
           *token = args->items[j];
@@ -446,10 +457,9 @@ void expand_macro(Macro *macro, Parser *parser, u32 prev_index, Tokens *args) {
   }
 }
 
-void compile_macro_call(Compiler *compiler, Token *dest,
+void compile_macro_call(Compiler *compiler, Token *dest_token,
                         u32 prev_index, Procedure *current_proc) {
   Token *name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
-  Args args = {0};
   ParamKinds param_kinds = {0};
   u32 arg_tokens_begin_index = compiler->parser.index;
 
@@ -464,15 +474,19 @@ void compile_macro_call(Compiler *compiler, Token *dest,
 
   Token *arg_tokens_begin = compiler->parser.tokens.items + arg_tokens_begin_index;
   u32 arg_tokens_len = compiler->parser.index - arg_tokens_begin_index;
-  Tokens arg_tokens = { arg_tokens_begin, arg_tokens_len, 0 };
+
+  Tokens arg_tokens = {0};
+  for (u32 i = 0; i < arg_tokens_len; ++i)
+    DA_APPEND(arg_tokens, arg_tokens_begin[i]);
 
   parser_next_token(&compiler->parser);
 
-  if (dest)
-    DA_APPEND(arg_tokens, *dest);
+  Str dest = {0};
+  if (dest_token)
+    dest = dest_token->lexeme;
 
-  Macro *macro = get_macro(&compiler->macros, name->lexeme, param_kinds);
-  expand_macro(macro, &compiler->parser, prev_index, &arg_tokens);
+  Macro *macro = get_macro(&compiler->macros, name->lexeme, param_kinds, dest);
+  expand_macro(macro, &compiler->parser, prev_index, dest, &arg_tokens);
 }
 
 void compile(Tokens tokens, Program *program) {
@@ -705,10 +719,7 @@ void compile(Tokens tokens, Program *program) {
       }
     } break;
 
-
     case TT_IDENT: {
-      u32 prev_index = compiler.parser.index - 1;
-
       Token *next = parser_expect_token(&compiler.parser, MASK(TT_PUT) |
                                                           MASK(TT_COLON));
       if (next->id == TT_COLON) {
@@ -764,6 +775,8 @@ void compile(Tokens tokens, Program *program) {
 
       if (next && next->id == TT_MACRO_CALL) {
         parser_next_token(&compiler.parser);
+
+        u32 prev_index = compiler.parser.index - 3;
         compile_macro_call(&compiler, token, prev_index, current_proc);
         expect_new_line = false;
 
@@ -861,8 +874,12 @@ void compile(Tokens tokens, Program *program) {
       Token *next = parser_peek_token(&compiler.parser);
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
         parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-        parser_expect_token(&compiler.parser, MASK(TT_COLON));
-        parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+
+        if (parser_peek_token(&compiler.parser) &&
+            parser_peek_token(&compiler.parser)->id == TT_COLON) {
+          parser_next_token(&compiler.parser);
+          parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        }
 
         next = parser_peek_token(&compiler.parser);
       }
