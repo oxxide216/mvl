@@ -8,7 +8,7 @@
 #include "shl_log.h"
 #include "parser.h"
 
-typedef Da(ValueKind) ParamKinds;
+typedef Da(ValueKind) ValueKinds;
 
 typedef struct {
   Str       var;
@@ -23,7 +23,7 @@ typedef struct {
 typedef struct {
   Str        name;
   ValueKind  ret_val_kind;
-  ParamKinds param_kinds;
+  ValueKinds param_kinds;
 } DefinedProcedure;
 
 typedef Da(DefinedProcedure) DefinedProcedures;
@@ -38,8 +38,15 @@ typedef struct {
 typedef Da(Block) Blocks;
 
 typedef struct {
+  Str        name;
+  ValueKinds kinds;
+} KindGroup;
+
+typedef Da(KindGroup) KindGroups;
+
+typedef struct {
   Str       name;
-  ValueKind kind;
+  KindGroup kind_group;
 } MacroParam;
 
 typedef Da(MacroParam) MacroParams;
@@ -59,6 +66,7 @@ typedef struct {
   VariableKinds       var_kinds;
   DefinedProcedures   procs;
   Macros              macros;
+  KindGroups          kind_groups;
   u32                 static_segments_count;
 } Compiler;
 
@@ -83,13 +91,13 @@ static Str value_kind_to_str(ValueKind kind) {
 
 static u32 define_proc(Compiler *compiler, Str name,
                        ValueKind ret_val_kind,
-                       ParamKinds param_kinds) {
+                       ValueKinds param_kinds) {
   DefinedProcedure proc = { name, ret_val_kind, param_kinds };
   DA_APPEND(compiler->procs, proc);
   return compiler->procs.len - 1;
 }
 
-static void fprint_proc_sign(FILE *stream, Str name, ParamKinds param_kinds) {
+static void fprint_proc_sign(FILE *stream, Str name, ValueKinds param_kinds) {
   str_fprint(stream, name);
   for (u32 i = 0; i < param_kinds.len; ++i) {
     fputc(' ', stream);
@@ -98,8 +106,8 @@ static void fprint_proc_sign(FILE *stream, Str name, ParamKinds param_kinds) {
   }
 }
 
-static bool proc_sign_eq(Str a_name, ParamKinds a_param_kinds,
-                         Str b_name, ParamKinds b_param_kinds) {
+static bool proc_sign_eq(Str a_name, ValueKinds a_param_kinds,
+                         Str b_name, ValueKinds b_param_kinds) {
   if (!str_eq(a_name, b_name))
     return false;
 
@@ -114,7 +122,7 @@ static bool proc_sign_eq(Str a_name, ParamKinds a_param_kinds,
 }
 
 static u32 get_proc_id(Compiler *compiler, Str name,
-                       ParamKinds param_kinds,
+                       ValueKinds param_kinds,
                        u32 current_proc_id) {
   for (u32 i = 0; i < compiler->procs.len; ++i) {
     DefinedProcedure *proc = compiler->procs.items + i;
@@ -227,7 +235,7 @@ static void compile_call(Compiler *compiler, Str dest,
                          Procedure *current_proc, u32 caller_id) {
   Token *callee_name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
   Args args = {0};
-  ParamKinds param_kinds = {0};
+  ValueKinds param_kinds = {0};
 
   while (parser_peek_token(&compiler->parser) &&
          parser_peek_token(&compiler->parser)->id != TT_NEWLINE) {
@@ -253,29 +261,53 @@ static void compile_call(Compiler *compiler, Str dest,
   }
 }
 
-bool macro_sign_eq(Macro *macro, Str name, ParamKinds param_kinds, Str ret_val_var) {
+bool macro_sign_eq(Macro *macro, Str name, MacroParams *params, Str ret_val_var) {
   if (!str_eq(macro->name, name))
     return false;
 
-  if (macro->params.len != param_kinds.len)
+  if (macro->params.len != params->len)
     return false;
 
   if (!!macro->ret_val_var.len != !!ret_val_var.len)
     return false;
 
   for (u32 i = 0; i < macro->params.len; ++i) {
-    ValueKind macro_param_kind = macro->params.items[i].kind;
-    ValueKind param_kind = param_kinds.items[i];
+    KindGroup *macro_param_kind_group = &macro->params.items[i].kind_group;
+    KindGroup *param_kind_group = &params->items[i].kind_group;
 
-    if (macro_param_kind != param_kind && macro_param_kind != ValueKindUnit)
+    bool found = macro_param_kind_group->kinds.len == 0;
+
+    for (u32 j = 0; j < macro_param_kind_group->kinds.len; ++j) {
+      ValueKind macro_param_kind = macro_param_kind_group->kinds.items[j];
+
+      for (u32 k = 0; k < param_kind_group->kinds.len; ++k) {
+        if (macro_param_kind == param_kind_group->kinds.items[k]) {
+          found = true;
+          break;
+        }
+      }
+
+      if (found)
+        break;
+    }
+
+    if (!found)
       return false;
   }
 
   return true;
 }
 
+KindGroup *get_kind_group(KindGroups *kind_groups, Str name) {
+  for (u32 i = 0; i < kind_groups->len; ++i)
+    if (str_eq(kind_groups->items[i].name, name))
+      return kind_groups->items + i;
+
+  return NULL;
+}
+
 void collect_defs(Compiler *compiler) {
-  define_proc(compiler, STR_LIT("init"), ValueKindUnit, (ParamKinds) {0});
+  define_proc(compiler, STR_LIT("init"), ValueKindUnit, (ValueKinds) {0});
 
   while (parser_peek_token(&compiler->parser)) {
     Token *token = parser_next_token(&compiler->parser);
@@ -288,7 +320,7 @@ void collect_defs(Compiler *compiler) {
         name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
 
       ValueKind ret_val_kind = ValueKindUnit;
-      ParamKinds param_kinds = {0};
+      ValueKinds param_kinds = {0};
 
       Token *next = parser_peek_token(&compiler->parser);
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
@@ -327,17 +359,23 @@ void collect_defs(Compiler *compiler) {
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
         Token *param_name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
 
-        ValueKind param_kind = ValueKindUnit;
+        KindGroup param_kind_group = {0};
         if (parser_peek_token(&compiler->parser) &&
             parser_peek_token(&compiler->parser)->id == TT_COLON) {
           parser_next_token(&compiler->parser);
           Token *param_kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
-
-          param_kind = str_to_value_kind(param_kind_token->lexeme);
+          KindGroup *param_kind_group_ptr = get_kind_group(&compiler->kind_groups,
+                                                           param_kind_token->lexeme);
+          if (param_kind_group_ptr) {
+            param_kind_group = *param_kind_group_ptr;
+          } else {
+            ValueKind param_kind = str_to_value_kind(param_kind_token->lexeme);
+            DA_APPEND(param_kind_group.kinds, param_kind);
+          }
         }
 
-        MacroParam param = { param_name_token->lexeme, param_kind };
-        DA_APPEND(macro.params, param);
+        MacroParam macro_param = { param_name_token->lexeme, param_kind_group };
+        DA_APPEND(macro.params, macro_param);
 
         next = parser_peek_token(&compiler->parser);
       }
@@ -351,16 +389,10 @@ void collect_defs(Compiler *compiler) {
         parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
       }
 
-      ParamKinds param_kinds = {0};
-      param_kinds.items = malloc(macro.params.len * sizeof(ValueKind));
-      param_kinds.len = macro.params.len;
-
-      for (u32 i = 0; i < param_kinds.len; ++i)
-        param_kinds.items[i] = macro.params.items[i].kind;
-
       for (u32 i = 0; i < compiler->macros.len; ++i) {
         Macro *temp_macro = compiler->macros.items + i;
-        if (macro_sign_eq(temp_macro, macro.name, param_kinds, macro.ret_val_var)) {
+
+        if (macro_sign_eq(temp_macro, macro.name, &macro.params, macro.ret_val_var)) {
           ERROR("Macro `"STR_FMT"` was redefined\n",
                 STR_ARG(name->lexeme));
           exit(1);
@@ -389,15 +421,31 @@ void collect_defs(Compiler *compiler) {
       }
 
       DA_APPEND(compiler->macros, macro);
+    } else if (token->id == TT_GROUP) {
+      KindGroup kind_group = {0};
+
+      Token *name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+      kind_group.name = name_token->lexeme;
+
+      parser_expect_token(&compiler->parser, MASK(TT_PUT));
+
+      while (parser_peek_token(&compiler->parser) &&
+             parser_peek_token(&compiler->parser)->id != TT_NEWLINE) {
+        Token *kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+        ValueKind kind = str_to_value_kind(kind_token->lexeme);
+        DA_APPEND(kind_group.kinds, kind);
+      }
+
+      DA_APPEND(compiler->kind_groups, kind_group);
     }
   }
 
   compiler->parser.index = 0;
 }
 
-Macro *get_macro(Macros *macros, Str name, ParamKinds param_kinds, Str ret_val_var) {
+Macro *get_macro(Macros *macros, Str name, MacroParams *params, Str ret_val_var) {
   for (u32 i = 0; i < macros->len; ++i)
-    if (macro_sign_eq(macros->items + i, name, param_kinds, ret_val_var))
+    if (macro_sign_eq(macros->items + i, name, params, ret_val_var))
       return macros->items + i;
 
   ERROR("`"STR_FMT"` macro was not found\n",
@@ -460,14 +508,20 @@ void expand_macro(Macro *macro, Parser *parser, u32 prev_index,
 void compile_macro_call(Compiler *compiler, Token *dest_token,
                         u32 prev_index, Procedure *current_proc) {
   Token *name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
-  ParamKinds param_kinds = {0};
+  MacroParams macro_params = {0};
   u32 arg_tokens_begin_index = compiler->parser.index;
 
   Token *next = parser_peek_token(&compiler->parser);
   while (next && next->id != TT_NEWLINE) {
     Arg arg = compile_arg(compiler);
-    ValueKind param_kind = compiler_get_arg_kind(compiler, &arg, current_proc);
-    DA_APPEND(param_kinds, param_kind);
+    ValueKind macro_param_kind = compiler_get_arg_kind(compiler, &arg, current_proc);
+
+    MacroParam macro_param = {0};
+    macro_param.kind_group.kinds.items = aalloc(sizeof(ValueKind));
+    macro_param.kind_group.kinds.items[0] = macro_param_kind;
+    macro_param.kind_group.kinds.len = 1;
+    macro_param.kind_group.kinds.cap = 1;
+    DA_APPEND(macro_params, macro_param);
 
     next = parser_peek_token(&compiler->parser);
   }
@@ -485,7 +539,7 @@ void compile_macro_call(Compiler *compiler, Token *dest_token,
   if (dest_token)
     dest = dest_token->lexeme;
 
-  Macro *macro = get_macro(&compiler->macros, name->lexeme, param_kinds, dest);
+  Macro *macro = get_macro(&compiler->macros, name->lexeme, &macro_params, dest);
   expand_macro(macro, &compiler->parser, prev_index, dest, &arg_tokens);
 }
 
@@ -498,7 +552,7 @@ void compile(Tokens tokens, Program *program) {
                     ValueKindUnit, (ProcParams) {0},
                     false);
   define_proc(&compiler, STR_LIT("@init"),
-              ValueKindUnit, (ParamKinds) {0});
+              ValueKindUnit, (ValueKinds) {0});
 
   Procedure *current_proc = NULL;
   u32 current_proc_id = 0;
@@ -526,7 +580,8 @@ void compile(Tokens tokens, Program *program) {
                                                          MASK(TT_INIT) |
                                                          MASK(TT_DEREF) |
                                                          MASK(TT_MACRO) |
-                                                         MASK(TT_MACRO_CALL));
+                                                         MASK(TT_MACRO_CALL) |
+                                                         MASK(TT_GROUP));
 
     if (!current_proc &&
         token->id != TT_PROC &&
@@ -534,7 +589,8 @@ void compile(Tokens tokens, Program *program) {
         token->id != TT_INCLUDE &&
         token->id != TT_STATIC &&
         token->id != TT_INIT &&
-        token->id != TT_MACRO) {
+        token->id != TT_MACRO &&
+        token->id != TT_GROUP) {
       ERROR("Every instruction should be inside of a procedure\n");
       exit(1);
     }
@@ -561,7 +617,7 @@ void compile(Tokens tokens, Program *program) {
 
       ValueKind ret_val_kind = ValueKindUnit;
       ProcParams params = {0};
-      ParamKinds param_kinds = {0};
+      ValueKinds param_kinds = {0};
 
       compiler.var_kinds.kinds.len = 0;
 
@@ -915,6 +971,15 @@ void compile(Tokens tokens, Program *program) {
       u32 prev_index = compiler.parser.index - 1;
       compile_macro_call(&compiler, NULL, prev_index, current_proc);
       expect_new_line = false;
+    } break;
+
+    case TT_GROUP: {
+      parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+      parser_expect_token(&compiler.parser, MASK(TT_PUT));
+
+      while (parser_peek_token(&compiler.parser) &&
+             parser_peek_token(&compiler.parser)->id != TT_NEWLINE)
+        parser_expect_token(&compiler.parser, MASK(TT_IDENT));
     } break;
 
     default: {
