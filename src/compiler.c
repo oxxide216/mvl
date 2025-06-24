@@ -38,9 +38,16 @@ typedef struct {
 typedef Da(Block) Blocks;
 
 typedef struct {
-  Str     name;
-  Da(Str) arg_names;
-  Tokens  tokens;
+  Str       name;
+  ValueKind kind;
+} MacroParam;
+
+typedef Da(MacroParam) MacroParams;
+
+typedef struct {
+  Str         name;
+  MacroParams params;
+  Tokens      tokens;
 } Macro;
 
 typedef Da(Macro) Macros;
@@ -245,6 +252,24 @@ static void compile_call(Compiler *compiler, Str dest,
   }
 }
 
+bool macro_sign_eq(Macro *macro, Str name, ParamKinds param_kinds) {
+  if (!str_eq(macro->name, name))
+    return false;
+
+  if (macro->params.len != param_kinds.len)
+    return false;
+
+  for (u32 i = 0; i < macro->params.len; ++i) {
+    ValueKind macro_param_kind = macro->params.items[i].kind;
+    ValueKind param_kind = param_kinds.items[i];
+
+    if (macro_param_kind != param_kind)
+      return false;
+  }
+
+  return true;
+}
+
 void collect_defs(Compiler *compiler) {
   define_proc(compiler, STR_LIT("init"), ValueKindUnit, (ParamKinds) {0});
 
@@ -294,19 +319,15 @@ void collect_defs(Compiler *compiler) {
       Token *name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
       macro.name = name->lexeme;
 
-      for (u32 i = 0; i < compiler->macros.len; ++i) {
-        Macro *temp_macro = compiler->macros.items + i;
-        if (str_eq(temp_macro->name, macro.name)) {
-          ERROR("Macro `"STR_FMT"` was redefined\n",
-                STR_ARG(name->lexeme));
-          exit(1);
-        }
-      }
-
       Token *next = parser_peek_token(&compiler->parser);
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
-        Token *arg_name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
-        DA_APPEND(macro.arg_names, arg_name->lexeme);
+        Token *param_name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+        parser_expect_token(&compiler->parser, MASK(TT_COLON));
+        Token *param_kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+
+        ValueKind param_kind = str_to_value_kind(param_kind_token->lexeme);
+        MacroParam param = { param_name_token->lexeme, param_kind };
+        DA_APPEND(macro.params, param);
 
         next = parser_peek_token(&compiler->parser);
       }
@@ -314,10 +335,29 @@ void collect_defs(Compiler *compiler) {
       parser_next_token(&compiler->parser);
 
       if (next->id == TT_RIGHT_ARROW) {
-        Token *ret_val_name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
-        DA_APPEND(macro.arg_names, ret_val_name->lexeme);
+        Token *ret_val_kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+
+        ValueKind param_kind = str_to_value_kind(ret_val_kind_token->lexeme);
+        MacroParam param = { STR_LIT("@ret_val"), param_kind };
+        DA_APPEND(macro.params, param);
 
         parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
+      }
+
+      ParamKinds param_kinds = {0};
+      param_kinds.items = malloc(macro.params.len * sizeof(ValueKind));
+      param_kinds.len = macro.params.len;
+
+      for (u32 i = 0; i < param_kinds.len; ++i)
+        param_kinds.items[i] = macro.params.items[i].kind;
+
+      for (u32 i = 0; i < compiler->macros.len; ++i) {
+        Macro *temp_macro = compiler->macros.items + i;
+        if (macro_sign_eq(temp_macro, macro.name, param_kinds)) {
+          ERROR("Macro `"STR_FMT"` was redefined\n",
+                STR_ARG(name->lexeme));
+          exit(1);
+        }
       }
 
       u32 recursion_level = 1;
@@ -348,9 +388,9 @@ void collect_defs(Compiler *compiler) {
   compiler->parser.index = 0;
 }
 
-Macro *get_macro(Macros *macros, Str name) {
+Macro *get_macro(Macros *macros, Str name, ParamKinds param_kinds) {
   for (u32 i = 0; i < macros->len; ++i)
-    if (str_eq(macros->items[i].name, name))
+    if (macro_sign_eq(macros->items + i, name, param_kinds))
       return macros->items + i;
 
   ERROR("`"STR_FMT"` macro was not found\n",
@@ -396,8 +436,8 @@ void expand_macro(Macro *macro, Parser *parser, u32 prev_index, Tokens *args) {
     Token *token = tokens->items + prev_index + i;
 
     if (token->id == TT_IDENT) {
-      for (u32 j = 0; j < macro->arg_names.len; ++j) {
-        if (str_eq(token->lexeme, macro->arg_names.items[j])) {
+      for (u32 j = 0; j < macro->params.len; ++j) {
+        if (str_eq(token->lexeme, macro->params.items[j].name)) {
           *token = args->items[j];
           break;
         }
@@ -406,25 +446,33 @@ void expand_macro(Macro *macro, Parser *parser, u32 prev_index, Tokens *args) {
   }
 }
 
-void compile_macro_call(Compiler *compiler, Token *dest, u32 prev_index) {
+void compile_macro_call(Compiler *compiler, Token *dest,
+                        u32 prev_index, Procedure *current_proc) {
   Token *name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
-  Tokens args = {0};
+  Args args = {0};
+  ParamKinds param_kinds = {0};
+  u32 arg_tokens_begin_index = compiler->parser.index;
 
   Token *next = parser_peek_token(&compiler->parser);
   while (next && next->id != TT_NEWLINE) {
-    Token *arg = parser_next_token(&compiler->parser);
-    DA_APPEND(args, *arg);
+    Arg arg = compile_arg(compiler);
+    ValueKind param_kind = compiler_get_arg_kind(compiler, &arg, current_proc);
+    DA_APPEND(param_kinds, param_kind);
 
     next = parser_peek_token(&compiler->parser);
   }
 
+  Token *arg_tokens_begin = compiler->parser.tokens.items + arg_tokens_begin_index;
+  u32 arg_tokens_len = compiler->parser.index - arg_tokens_begin_index;
+  Tokens arg_tokens = { arg_tokens_begin, arg_tokens_len, 0 };
+
   parser_next_token(&compiler->parser);
 
   if (dest)
-    DA_APPEND(args, *dest);
+    DA_APPEND(arg_tokens, *dest);
 
-  Macro *macro = get_macro(&compiler->macros, name->lexeme);
-  expand_macro(macro, &compiler->parser, prev_index, &args);
+  Macro *macro = get_macro(&compiler->macros, name->lexeme, param_kinds);
+  expand_macro(macro, &compiler->parser, prev_index, &arg_tokens);
 }
 
 void compile(Tokens tokens, Program *program) {
@@ -432,12 +480,14 @@ void compile(Tokens tokens, Program *program) {
   compiler.program = program;
   compiler.parser.tokens = tokens;
 
-  Procedure *proc = program_push_proc(program, STR_LIT("@init"),
-                                      ValueKindUnit, (ProcParams) {0},
-                                      false);
+  program_push_proc(program, STR_LIT("@init"),
+                    ValueKindUnit, (ProcParams) {0},
+                    false);
+  define_proc(&compiler, STR_LIT("@init"),
+              ValueKindUnit, (ParamKinds) {0});
 
-  u32 current_proc_id = define_proc(&compiler, STR_LIT("@init"),
-                                    ValueKindUnit, (ParamKinds) {0});
+  Procedure *current_proc = NULL;
+  u32 current_proc_id = 0;
 
   u32 labels_count = 0;
   Blocks blocks = {0};
@@ -464,13 +514,13 @@ void compile(Tokens tokens, Program *program) {
                                                          MASK(TT_MACRO) |
                                                          MASK(TT_MACRO_CALL));
 
-    if (token->id != TT_PROC &&
+    if (!current_proc &&
+        token->id != TT_PROC &&
         token->id != TT_NEWLINE &&
         token->id != TT_INCLUDE &&
         token->id != TT_STATIC &&
         token->id != TT_INIT &&
-        token->id != TT_MACRO &&
-        proc == NULL) {
+        token->id != TT_MACRO) {
       ERROR("Every instruction should be inside of a procedure\n");
       exit(1);
     }
@@ -484,7 +534,7 @@ void compile(Tokens tokens, Program *program) {
 
     case TT_PROC: {
       if (blocks.len > 0) {
-        ERROR(STR_FMT": block was not closed\n", STR_ARG(proc->name));
+        ERROR(STR_FMT": block was not closed\n", STR_ARG(current_proc->name));
         exit(1);
       }
 
@@ -528,7 +578,7 @@ void compile(Tokens tokens, Program *program) {
       current_proc_id = define_proc(&compiler, name_token->lexeme,
                                     ret_val_kind, param_kinds);
       Str name = get_proc_hashed_name(&compiler, current_proc_id);
-      proc = program_push_proc(program, name, ret_val_kind, params, is_naked);
+      current_proc = program_push_proc(program, name, ret_val_kind, params, is_naked);
     } break;
 
     case TT_IF:
@@ -566,7 +616,7 @@ void compile(Tokens tokens, Program *program) {
         sb_push_u32(&begin_label_sb, labels_count++);
         begin_label_name = sb_to_str(begin_label_sb);
 
-        proc_add_label(proc, begin_label_name);
+        proc_add_label(current_proc, begin_label_name);
       }
 
       StringBuilder end_label_sb = {0};
@@ -582,12 +632,12 @@ void compile(Tokens tokens, Program *program) {
       };
       DA_APPEND(blocks, new_block);
 
-      proc_cond_jump(proc, rel_op, arg0, arg1, end_label_name);
+      proc_cond_jump(current_proc, rel_op, arg0, arg1, end_label_name);
     } break;
 
     case TT_ELSE: {
       if (blocks.len == 0 || blocks.items[blocks.len - 1].is_while) {
-        ERROR(STR_FMT": `else` not inside of `if`\n", STR_ARG(proc->name));
+        ERROR(STR_FMT": `else` not inside of `if`\n", STR_ARG(current_proc->name));
         exit(1);
       }
 
@@ -600,15 +650,15 @@ void compile(Tokens tokens, Program *program) {
       sb_push_u32(&new_end_label_sb, labels_count++);
       Str new_end_label_name = sb_to_str(new_end_label_sb);
 
-      proc_jump(proc, new_end_label_name);
-      proc_add_label(proc, block->end_label_name);
+      proc_jump(current_proc, new_end_label_name);
+      proc_add_label(current_proc, block->end_label_name);
 
       block->end_label_name = new_end_label_name;
     } break;
 
     case TT_END: {
       if (blocks.len == 0) {
-        ERROR(STR_FMT": `end` not inside of a block\n", STR_ARG(proc->name));
+        ERROR(STR_FMT": `end` not inside of a block\n", STR_ARG(current_proc->name));
         exit(1);
       }
 
@@ -617,8 +667,8 @@ void compile(Tokens tokens, Program *program) {
       compiler.var_kinds.kinds.len = block->first_var_index;
 
       if (block->is_while)
-        proc_jump(proc, block->begin_label_name);
-      proc_add_label(proc, block->end_label_name);
+        proc_jump(current_proc, block->begin_label_name);
+      proc_add_label(current_proc, block->end_label_name);
     } break;
 
     case TT_BREAK:
@@ -629,18 +679,18 @@ void compile(Tokens tokens, Program *program) {
         if (blocks.items[i - 1].is_while) {
           found_while = true;
           if (token->id == TT_BREAK)
-            proc_jump(proc, blocks.items[i - 1].end_label_name);
+            proc_jump(current_proc, blocks.items[i - 1].end_label_name);
           else
-            proc_jump(proc, blocks.items[i - 1].begin_label_name);
+            proc_jump(current_proc, blocks.items[i - 1].begin_label_name);
           break;
         }
       }
 
       if (!found_while) {
         if (token->id == TT_BREAK)
-          ERROR(STR_FMT": `break` not inside of a loop\n", STR_ARG(proc->name));
+          ERROR(STR_FMT": `break` not inside of a loop\n", STR_ARG(current_proc->name));
         else
-          ERROR(STR_FMT": `continue` not inside of a loop\n", STR_ARG(proc->name));
+          ERROR(STR_FMT": `continue` not inside of a loop\n", STR_ARG(current_proc->name));
         exit(1);
       }
     } break;
@@ -648,10 +698,10 @@ void compile(Tokens tokens, Program *program) {
     case TT_RET: {
       Token *next = parser_peek_token(&compiler.parser);
       if (!next || next->id == TT_NEWLINE) {
-        proc_return(proc);
+        proc_return(current_proc);
       } else {
         Arg arg = compile_arg(&compiler);
-        proc_return_value(proc, arg);
+        proc_return_value(current_proc, arg);
       }
     } break;
 
@@ -662,7 +712,7 @@ void compile(Tokens tokens, Program *program) {
       Token *next = parser_expect_token(&compiler.parser, MASK(TT_PUT) |
                                                           MASK(TT_COLON));
       if (next->id == TT_COLON) {
-        proc_add_label(proc, token->lexeme);
+        proc_add_label(current_proc, token->lexeme);
         break;
       }
 
@@ -670,7 +720,7 @@ void compile(Tokens tokens, Program *program) {
 
       if (next && next->id == TT_AT) {
         parser_next_token(&compiler.parser);
-        compile_call(&compiler, token->lexeme, proc, current_proc_id);
+        compile_call(&compiler, token->lexeme, current_proc, current_proc_id);
         break;
       }
 
@@ -680,7 +730,7 @@ void compile(Tokens tokens, Program *program) {
 
         parser_next_token(&compiler.parser);
         Token *src_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-        proc_ref(proc, token->lexeme, src_name->lexeme);
+        proc_ref(current_proc, token->lexeme, src_name->lexeme);
         break;
       }
 
@@ -694,7 +744,7 @@ void compile(Tokens tokens, Program *program) {
         VariableKind var_kind = { token->lexeme, kind };
         DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
-        proc_deref(proc, token->lexeme, kind, ref_name->lexeme);
+        proc_deref(current_proc, token->lexeme, kind, ref_name->lexeme);
         break;
       }
 
@@ -708,13 +758,13 @@ void compile(Tokens tokens, Program *program) {
         VariableKind var_kind = { token->lexeme, kind };
         DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
-        proc_cast(proc, token->lexeme, kind, arg_var_name->lexeme);
+        proc_cast(current_proc, token->lexeme, kind, arg_var_name->lexeme);
         break;
       }
 
       if (next && next->id == TT_MACRO_CALL) {
         parser_next_token(&compiler.parser);
-        compile_macro_call(&compiler, token, prev_index);
+        compile_macro_call(&compiler, token, prev_index, current_proc);
         expect_new_line = false;
 
         break;
@@ -722,15 +772,15 @@ void compile(Tokens tokens, Program *program) {
 
       Arg arg = compile_arg(&compiler);
 
-      ValueKind param_kind = compiler_get_arg_kind(&compiler, &arg, proc);
+      ValueKind param_kind = compiler_get_arg_kind(&compiler, &arg, current_proc);
       VariableKind var_kind = { token->lexeme, param_kind };
       DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
-      proc_assign(proc, token->lexeme, arg);
+      proc_assign(current_proc, token->lexeme, arg);
     } break;
 
     case TT_AT: {
-      compile_call(&compiler, (Str) {0}, proc, current_proc_id);
+      compile_call(&compiler, (Str) {0}, current_proc, current_proc_id);
     } break;
 
     case TT_INCLUDE: {
@@ -763,8 +813,8 @@ void compile(Tokens tokens, Program *program) {
       for (u32 i = 0; i < text_token->lexeme.len; ++i) {
         if (text_token->lexeme.ptr[i] == '@') {
           if (arg_index >= args.len) {
-            ERROR(STR_FMT": Not enough arguments in inline assembly\n",
-                  STR_ARG(proc->name));
+            ERROR(STR_FMT": not enough arguments in inline assembly\n",
+                  STR_ARG(current_proc->name));
             exit(1);
           }
 
@@ -791,18 +841,18 @@ void compile(Tokens tokens, Program *program) {
       if (text.len > 0)
         segments_push_text(&segments, text);
 
-      proc_inline_asm(proc, segments);
+      proc_inline_asm(current_proc, segments);
     } break;
 
     case TT_INIT: {
-      proc = program->procs;
+      current_proc = program->procs;
     } break;
 
     case TT_DEREF: {
       Token *dest_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
       parser_expect_token(&compiler.parser, MASK(TT_PUT));
       Arg arg = compile_arg(&compiler);
-      proc_ref_assign(proc, dest_token->lexeme, arg);
+      proc_ref_assign(current_proc, dest_token->lexeme, arg);
     } break;
 
     case TT_MACRO: {
@@ -810,6 +860,8 @@ void compile(Tokens tokens, Program *program) {
 
       Token *next = parser_peek_token(&compiler.parser);
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
+        parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        parser_expect_token(&compiler.parser, MASK(TT_COLON));
         parser_expect_token(&compiler.parser, MASK(TT_IDENT));
 
         next = parser_peek_token(&compiler.parser);
@@ -844,7 +896,7 @@ void compile(Tokens tokens, Program *program) {
 
     case TT_MACRO_CALL: {
       u32 prev_index = compiler.parser.index - 1;
-      compile_macro_call(&compiler, NULL, prev_index);
+      compile_macro_call(&compiler, NULL, prev_index, current_proc);
       expect_new_line = false;
     } break;
 
