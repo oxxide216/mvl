@@ -16,7 +16,6 @@ include=include
 static=static
 asm=asm
 naked=naked
-init=init
 cast=cast
 macro=macro
 group=group

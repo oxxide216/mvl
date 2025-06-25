@@ -25,7 +25,6 @@ static Str token_id_names[] = {
   STR_LIT("`static`"),
   STR_LIT("`asm`"),
   STR_LIT("`naked`"),
-  STR_LIT("`init`"),
   STR_LIT("`cast`"),
   STR_LIT("`macro`"),
   STR_LIT("`group`"),

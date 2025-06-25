@@ -385,8 +385,6 @@ void collect_defs(Compiler *compiler) {
       if (next->id == TT_RIGHT_ARROW) {
         Token *ret_val_var_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
         macro.ret_val_var = ret_val_var_token->lexeme;
-
-        parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
       }
 
       for (u32 i = 0; i < compiler->macros.len; ++i) {
@@ -400,6 +398,8 @@ void collect_defs(Compiler *compiler) {
       }
 
       u32 recursion_level = 1;
+
+      parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
 
       while (parser_peek_token(&compiler->parser)) {
         Token *token = parser_next_token(&compiler->parser);
@@ -548,12 +548,6 @@ void compile(Tokens tokens, Program *program) {
   compiler.program = program;
   compiler.parser.tokens = tokens;
 
-  program_push_proc(program, STR_LIT("@init"),
-                    ValueKindUnit, (ProcParams) {0},
-                    false);
-  define_proc(&compiler, STR_LIT("@init"),
-              ValueKindUnit, (ValueKinds) {0});
-
   Procedure *current_proc = NULL;
   u32 current_proc_id = 0;
 
@@ -577,7 +571,6 @@ void compile(Tokens tokens, Program *program) {
                                                          MASK(TT_INCLUDE) |
                                                          MASK(TT_STATIC) |
                                                          MASK(TT_ASM) |
-                                                         MASK(TT_INIT) |
                                                          MASK(TT_DEREF) |
                                                          MASK(TT_MACRO) |
                                                          MASK(TT_MACRO_CALL) |
@@ -588,7 +581,6 @@ void compile(Tokens tokens, Program *program) {
         token->id != TT_NEWLINE &&
         token->id != TT_INCLUDE &&
         token->id != TT_STATIC &&
-        token->id != TT_INIT &&
         token->id != TT_MACRO &&
         token->id != TT_GROUP) {
       ERROR("Every instruction should be inside of a procedure\n");
@@ -913,10 +905,6 @@ void compile(Tokens tokens, Program *program) {
       proc_inline_asm(current_proc, segments);
     } break;
 
-    case TT_INIT: {
-      current_proc = program->procs;
-    } break;
-
     case TT_DEREF: {
       Token *dest_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
       parser_expect_token(&compiler.parser, MASK(TT_PUT));
@@ -990,13 +978,5 @@ void compile(Tokens tokens, Program *program) {
 
     if (expect_new_line && parser_peek_token(&compiler.parser))
       parser_expect_token(&compiler.parser, MASK(TT_NEWLINE));
-  }
-
-  if (program->procs->next) {
-    if (program->procs->instrs) {
-      program->procs->instrs_end->next = program->procs->next->instrs;
-      program->procs->next->instrs = program->procs->instrs;
-    }
-    program->procs = program->procs->next;
   }
 }
