@@ -41,7 +41,7 @@ proc input fd: s64 -> s64
     if char == -1
       break
     end
-    if char == 10 # 10 = '\n'
+    if char == '\n'
       break
     end
 
