@@ -1,3 +1,7 @@
+include "math/mul.mvl"
+include "math/div.mvl"
+include "math/mod.mvl"
+
 macro add a b -> r
   r = a
   asm "add @,@@" r b
@@ -6,52 +10,6 @@ end
 macro sub a b -> r
   r = a
   asm "sub @,@@" r b
-end
-
-macro mul a: s64 b: s64 -> r
-  r = a
-  asm "mov rax,@" a
-  asm "imul @@" b
-  asm "mov @,rax" r
-end
-
-macro mul a: u64 b: u64 -> r
-  r = a
-  asm "mov rax,@" a
-  asm "mul @@" b
-  asm "mov @,rax" r
-end
-
-macro div a: s64 b: s64 -> r
-  r = a
-  asm "mov rax,@" a
-  asm "cqo"
-  asm "idiv @@" b
-  asm "mov @,rax" r
-end
-
-macro div a: u64 b: u64 -> r
-  r = a
-  asm "mov rax,@" a
-  asm "cqo"
-  asm "div @@" b
-  asm "mov @,rax" r
-end
-
-macro mod a: s64 b: s64 -> r
-  r = a
-  asm "mov rax,@" a
-  asm "cqo"
-  asm "idiv @@" b
-  asm "mov @,rdx" r
-end
-
-macro mod a: u64 b: u64 -> r
-  r = a
-  asm "mov rax,@" a
-  asm "cqo"
-  asm "div @@" b
-  asm "mov @,rdx" r
 end
 
 macro neg a -> r
