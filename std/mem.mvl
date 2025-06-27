@@ -1,10 +1,10 @@
 include "str.mvl"
 
-static PROT = 3
-static FLAGS = 34
-
 proc malloc size: s64 -> s64
   size = !add size 8
+
+  PROT = !or PROT_READ PROT_WRITE
+  FLAGS = !or MAP_PRIVATE MAP_ANONYMOUS
 
   ptr = @mmap 0 size PROT FLAGS -1 0
 

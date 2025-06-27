@@ -42,6 +42,14 @@ proc s64_to_str num: s64 -> s64
   buf_size = 0
   size_to_alloc = !add buf_cap 1
   buf = @malloc size_to_alloc
+  is_neg = 0
+
+  if num < 0
+    *buf = '-'
+    buf_size = !add buf_size 1
+    is_neg = 1
+    num = !neg num
+  end
 
   while 1 == 1
     if buf_size >= buf_cap
@@ -65,7 +73,7 @@ proc s64_to_str num: s64 -> s64
     end
   end
 
-  i = 0
+  i = is_neg
   j = !sub buf_size 1
   while i < j
     ptr_a = !add buf i
@@ -105,28 +113,28 @@ proc str_to_s64 str: s64 -> s64
     ptr = !add str i
     char = *s8 ptr
 
-    _zero = '0'
-    zero = cast s8 _zero
-    _nine = '9'
-    nine = cast s8 _nine
+    zero = '0'
+    zero_s8 = cast s8 zero
+    nine = '9'
+    nine_s8 = cast s8 nine
     if char == 0s8
       break
     end
-    if char < zero
+    if char < zero_s8
       i = !add i 1
       continue
     end
-    if char > nine
+    if char > nine_s8
       i = !add i 1
       continue
     end
 
     ptr = !add str i
-    _digit = !sub char 0s8
-    digit = cast s64 _digit
+    digit = !sub char 0s8
+    digit_s64 = cast s64 digit
 
     num = !mul num 10
-    num = !add num digit
+    num = !add num digit_s64
 
     i = !add i 1
   end

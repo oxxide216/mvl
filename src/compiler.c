@@ -854,7 +854,7 @@ void compile(Tokens tokens, Program *program) {
       Token *value_token = parser_expect_token(&compiler.parser, MASK(TT_NUMBER));
 
       Value value = str_to_number_value(value_token->lexeme);
-      program_push_static_var(program, name_token->lexeme, value, false);
+      program_push_static_var(program, name_token->lexeme, value);
     } break;
 
     case TT_ASM: {
