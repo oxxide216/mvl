@@ -186,12 +186,10 @@ void sb_push_i32(StringBuilder *sb, int num) {
 void sb_push_i64(StringBuilder *sb, long int num) {
   long int _num = num;
   unsigned int len = 1;
-  bool is_neg = false;
 
-  if (num < 0) {
-    num *= -1;
+  if (_num < 0) {
+    _num *= -1;
     ++len;
-    is_neg = true;
   }
 
   while (_num >= 10) {
@@ -200,10 +198,7 @@ void sb_push_i64(StringBuilder *sb, long int num) {
   }
 
   sb_reserve_space(sb, len);
-  if (is_neg)
-    snprintf(sb->buffer + sb->len, len + 1, "-%ld", num);
-  else
-    snprintf(sb->buffer + sb->len, len + 1, "%ld", num);
+  snprintf(sb->buffer + sb->len, len + 1, "%ld", num);
   sb->len += len;
 }
 
