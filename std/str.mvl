@@ -115,22 +115,17 @@ proc str_to_s64 str: s64 -> s64
 
     zero = '0'
     zero_s8 = cast s8 zero
-    nine = '9'
-    nine_s8 = cast s8 nine
-    if char == 0s8
+    if char < zero_s8
       break
     end
-    if char < zero_s8
-      i = !add i 1
-      continue
-    end
+
+    nine = '9'
+    nine_s8 = cast s8 nine
     if char > nine_s8
-      i = !add i 1
-      continue
+      break
     end
 
-    ptr = !add str i
-    digit = !sub char 0s8
+    digit = !sub char zero_s8
     digit_s64 = cast s64 digit
 
     num = !mul num 10
