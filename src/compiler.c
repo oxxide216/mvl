@@ -779,45 +779,47 @@ void compile(Tokens tokens, Program *program) {
 
       if (next && next->id == TT_AT) {
         parser_next_token(&compiler.parser);
+
         compile_call(&compiler, token->lexeme, current_proc, current_proc_id);
         break;
       }
 
       if (next && next->id == TT_REF) {
+        parser_next_token(&compiler.parser);
+
         VariableKind var_kind = { token->lexeme, ValueKindU64 };
         DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
-        parser_next_token(&compiler.parser);
-        Token *src_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-        proc_ref(current_proc, token->lexeme, src_name->lexeme);
+        Arg src = compile_arg(&compiler);
+        proc_ref(current_proc, token->lexeme, src);
         break;
       }
 
       if (next && next->id == TT_DEREF) {
         parser_next_token(&compiler.parser);
         Token *value_kind_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-        Token *ref_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        Arg ref = compile_arg(&compiler);
 
         ValueKind kind = str_to_value_kind(value_kind_name->lexeme);
 
         VariableKind var_kind = { token->lexeme, kind };
         DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
-        proc_deref(current_proc, token->lexeme, kind, ref_name->lexeme);
+        proc_deref(current_proc, token->lexeme, kind, ref);
         break;
       }
 
       if (next && next->id == TT_CAST) {
         parser_next_token(&compiler.parser);
         Token *value_kind_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
-        Token *arg_var_name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        Arg src = compile_arg(&compiler);
 
         ValueKind kind = str_to_value_kind(value_kind_name->lexeme);
 
         VariableKind var_kind = { token->lexeme, kind };
         DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
-        proc_cast(current_proc, token->lexeme, kind, arg_var_name->lexeme);
+        proc_cast(current_proc, token->lexeme, kind, src);
         break;
       }
 
