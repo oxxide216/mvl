@@ -28,6 +28,7 @@ static Str token_id_names[] = {
   STR_LIT("`cast`"),
   STR_LIT("`macro`"),
   STR_LIT("`group`"),
+  STR_LIT("`record`"),
   STR_LIT("identifier"),
   STR_LIT("number"),
   STR_LIT("`(`"),
@@ -46,6 +47,7 @@ static Str token_id_names[] = {
   STR_LIT("'&'"),
   STR_LIT("`*`"),
   STR_LIT("`!`"),
+  STR_LIT("`$`"),
 };
 
 Token *parser_peek_token(Parser *parser) {
@@ -161,8 +163,8 @@ ValueKind str_to_value_kind(Str str) {
   if (str_eq(str, STR_LIT("u8")))
     return ValueKindU8;
 
-  ERROR("Unknown type name: "STR_FMT"\n", STR_ARG(str));
-  exit(1);
+  // Record pointer type
+  return ValueKindS64;
 }
 
 Value str_to_number_value(Str str) {

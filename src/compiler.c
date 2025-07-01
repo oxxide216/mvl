@@ -8,6 +8,8 @@
 #include "shl_log.h"
 #include "parser.h"
 
+#define POINTER_VALUE_KIND ValueKindS64
+
 typedef Da(ValueKind) ValueKinds;
 
 typedef struct {
@@ -67,11 +69,26 @@ typedef struct {
 typedef Da(Macro) Macros;
 
 typedef struct {
+  Str       name;
+  ValueKind kind;
+} Field;
+
+typedef Da(Field) Fields;
+
+typedef struct {
+  Str    name;
+  Fields fields;
+} Record;
+
+typedef Da(Record) Records;
+
+typedef struct {
   Program            *program;
   Parser              parser;
   VariableKinds       var_kinds;
   DefinedProcedures   procs;
   Macros              macros;
+  Records             records;
   KindGroups          kind_groups;
   u32                 static_segments_count;
 } Compiler;
@@ -445,6 +462,34 @@ void collect_defs(Compiler *compiler) {
       }
 
       DA_APPEND(compiler->kind_groups, kind_group);
+    } else if (token->id == TT_RECORD) {
+      Record record = {0};
+
+      Token *name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+      record.name = name_token->lexeme;
+
+      parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
+
+      while (parser_peek_token(&compiler->parser) &&
+             parser_peek_token(&compiler->parser)->id != TT_END) {
+        Token *field_name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+        parser_expect_token(&compiler->parser, MASK(TT_COLON));
+        Token *field_kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
+
+        ValueKind field_kind = str_to_value_kind(field_kind_token->lexeme);
+
+        Field field = {
+          field_name_token->lexeme,
+          field_kind,
+        };
+        DA_APPEND(record.fields, field);
+
+        parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
+      }
+
+      DA_APPEND(compiler->records, record);
+
+      parser_expect_token(&compiler->parser, MASK(TT_END));
     }
   }
 
@@ -551,6 +596,33 @@ void compile_macro_call(Compiler *compiler, Token *dest_token,
   expand_macro(macro, &compiler->parser, prev_index, dest, &arg_tokens);
 }
 
+static Record *get_record(Records *records, Str name, ValueKinds *field_kinds) {
+  for (u32 i = 0; i < records->len; ++i) {
+    Record *record = records->items + i;
+
+    if (!str_eq(record->name, name))
+      continue;
+
+    if (record->fields.len != field_kinds->len)
+      continue;
+
+    bool found_field = true;
+    for (u32 j = 0; j < field_kinds->len; ++j) {
+      if (record->fields.items[j].kind != field_kinds->items[j]) {
+        found_field = false;
+        break;
+      }
+    }
+
+    if (!found_field)
+      continue;
+
+    return record;
+  }
+
+  return NULL;
+}
+
 void compile(Tokens tokens, Program *program) {
   Compiler compiler = {0};
   compiler.program = program;
@@ -582,7 +654,8 @@ void compile(Tokens tokens, Program *program) {
                                                          MASK(TT_DEREF) |
                                                          MASK(TT_MACRO) |
                                                          MASK(TT_MACRO_CALL) |
-                                                         MASK(TT_GROUP));
+                                                         MASK(TT_GROUP) |
+                                                         MASK(TT_RECORD));
 
     if (!current_proc &&
         token->id != TT_PROC &&
@@ -590,7 +663,8 @@ void compile(Tokens tokens, Program *program) {
         token->id != TT_INCLUDE &&
         token->id != TT_STATIC &&
         token->id != TT_MACRO &&
-        token->id != TT_GROUP) {
+        token->id != TT_GROUP &&
+        token->id != TT_RECORD) {
       ERROR("Every instruction should be inside of a procedure\n");
       exit(1);
     }
@@ -819,7 +893,7 @@ void compile(Tokens tokens, Program *program) {
         VariableKind var_kind = { token->lexeme, kind };
         DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
-        proc_deref(current_proc, token->lexeme, kind, ref);
+        proc_deref(current_proc, token->lexeme, kind, ref, 0);
         break;
       }
 
@@ -843,6 +917,48 @@ void compile(Tokens tokens, Program *program) {
         u32 prev_index = compiler.parser.index - 3;
         compile_macro_call(&compiler, token, prev_index, current_proc);
         expect_new_line = false;
+
+        break;
+      }
+
+      if (next && next->id == TT_RECORD_CREATE) {
+        parser_next_token(&compiler.parser);
+
+        Token *record_name_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        Args args = {0};
+        ValueKinds param_kinds = {0};
+
+        while (parser_peek_token(&compiler.parser) &&
+               parser_peek_token(&compiler.parser)->id != TT_NEWLINE) {
+          Arg arg = compile_arg(&compiler);
+          args_push_arg(&args, arg);
+
+          ValueKind param_kind = compiler_get_arg_kind(&compiler, &arg, current_proc);
+          DA_APPEND(param_kinds, param_kind);
+        }
+
+        Record *record = get_record(&compiler.records, record_name_token->lexeme, &param_kinds);
+        if (!record) {
+          ERROR("Record `"STR_FMT"` with such signature was not found\n",
+                STR_ARG(record_name_token->lexeme));
+          exit(1);
+        }
+
+        VariableKind var_kind = { token->lexeme, POINTER_VALUE_KIND };
+        DA_APPEND(compiler.var_kinds.kinds, var_kind);
+
+        u32 record_size = 0;
+        for (u32 i = 0; i < record->fields.len; ++i)
+          record_size += get_value_size(record->fields.items[i].kind);
+
+        proc_stack_alloc(current_proc, token->lexeme, record_size);
+
+        u32 offset = 0;
+        for (u32 i = 0; i < record->fields.len; ++i) {
+          Arg arg = args.items[i];
+          proc_ref_assign(current_proc, token->lexeme, arg, offset);
+          offset += get_value_size(record->fields.items[i].kind);
+        }
 
         break;
       }
@@ -925,7 +1041,7 @@ void compile(Tokens tokens, Program *program) {
       Token *dest_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
       parser_expect_token(&compiler.parser, MASK(TT_PUT));
       Arg arg = compile_arg(&compiler);
-      proc_ref_assign(current_proc, dest_token->lexeme, arg);
+      proc_ref_assign(current_proc, dest_token->lexeme, arg, 0);
     } break;
 
     case TT_MACRO: {
@@ -986,6 +1102,21 @@ void compile(Tokens tokens, Program *program) {
         parser_expect_token(&compiler.parser, MASK(TT_IDENT));
     } break;
 
+    case TT_RECORD: {
+      parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+      parser_expect_token(&compiler.parser, MASK(TT_NEWLINE));
+
+      while (parser_peek_token(&compiler.parser) &&
+             parser_peek_token(&compiler.parser)->id != TT_END) {
+        parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        parser_expect_token(&compiler.parser, MASK(TT_COLON));
+        parser_expect_token(&compiler.parser, MASK(TT_IDENT));
+        parser_expect_token(&compiler.parser, MASK(TT_NEWLINE));
+      }
+
+      parser_expect_token(&compiler.parser, MASK(TT_END));
+    } break;
+
     default: {
       ERROR("Unexpected token id\n");
       exit(1);
@@ -994,5 +1125,10 @@ void compile(Tokens tokens, Program *program) {
 
     if (expect_new_line && parser_peek_token(&compiler.parser))
       parser_expect_token(&compiler.parser, MASK(TT_NEWLINE));
+  }
+
+  if (blocks.len > 0) {
+    ERROR(STR_FMT": block was not closed\n", STR_ARG(current_proc->name));
+    exit(1);
   }
 }

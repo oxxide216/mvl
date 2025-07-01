@@ -1,0 +1,15 @@
+include "../std/math.mvl"
+
+record vec2
+  x: s64
+  y: s64
+end
+
+proc main -> s64
+  my_vec = $vec2 1 2
+  y_ptr = !add my_vec 8
+  x = *s64 my_vec
+  y = *s64 y_ptr
+  sum = !add x y
+  ret sum
+end
