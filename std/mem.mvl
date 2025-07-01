@@ -16,6 +16,7 @@ proc malloc size: s64 -> s64
   ptr = !add ptr 8
 
   ret ptr
+end
 
 proc realloc ptr: s64 size: s64 -> s64
   size_ptr = !sub ptr 8
@@ -26,11 +27,13 @@ proc realloc ptr: s64 size: s64 -> s64
   @free ptr
 
   ret new_ptr
+end
 
 proc free ptr: s64
   ptr = !sub ptr 8
   size = *s64 ptr
   @munmap ptr size
+end
 
 proc memcopy dest: s64 src: s64 size: s64
   i = 0
@@ -45,6 +48,7 @@ proc memcopy dest: s64 src: s64 size: s64
     dest_ptr = !add dest_ptr 1
     src_ptr = !add src_ptr 1
   end
+end
 
 proc memmove dest: s64 src: s64 size: s64
   if size == 0
@@ -78,3 +82,4 @@ proc memmove dest: s64 src: s64 size: s64
       src_ptr = !add src_ptr 1
     end
   end
+end

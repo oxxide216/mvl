@@ -28,11 +28,17 @@ typedef struct {
 
 typedef Da(DefinedProcedure) DefinedProcedures;
 
+typedef enum {
+  BlockKindIf = 0,
+  BlockKindWhile,
+  BlockKindProc,
+} BlockKind;
+
 typedef struct {
-  bool is_while;
-  Str  begin_label_name;
-  Str  end_label_name;
-  u32  first_var_index;
+  BlockKind kind;
+  Str       begin_label_name;
+  Str       end_label_name;
+  u32       first_var_index;
 } Block;
 
 typedef Da(Block) Blocks;
@@ -404,7 +410,9 @@ void collect_defs(Compiler *compiler) {
       while (parser_peek_token(&compiler->parser)) {
         Token *token = parser_next_token(&compiler->parser);
 
-        if (token->id == TT_IF || token->id == TT_WHILE) {
+        if (token->id == TT_IF ||
+            token->id == TT_WHILE ||
+            token->id == TT_PROC) {
           ++recursion_level;
         } else if (token->id == TT_END) {
           if (--recursion_level == 0)
@@ -637,6 +645,12 @@ void compile(Tokens tokens, Program *program) {
         ret_val_kind = str_to_value_kind(ret_val_kind_token->lexeme);
       }
 
+      Block new_block = {
+        BlockKindProc, {0}, {0},
+        compiler.var_kinds.kinds.len,
+      };
+      DA_APPEND(blocks, new_block);
+
       current_proc_id = define_proc(&compiler, name_token->lexeme,
                                     ret_val_kind, param_kinds);
       Str name = get_proc_hashed_name(&compiler, current_proc_id);
@@ -646,11 +660,9 @@ void compile(Tokens tokens, Program *program) {
     case TT_IF:
     case TT_WHILE: {
       Arg arg0 = compile_arg(&compiler);
-
       Token *op = parser_expect_token(&compiler.parser, MASK(TT_EQ) | MASK(TT_NE) |
                                                         MASK(TT_GT) | MASK(TT_LS) |
                                                         MASK(TT_GE) | MASK(TT_LE));
-
       Arg arg1 = compile_arg(&compiler);
 
       RelOp rel_op;
@@ -698,7 +710,8 @@ void compile(Tokens tokens, Program *program) {
     } break;
 
     case TT_ELSE: {
-      if (blocks.len == 0 || blocks.items[blocks.len - 1].is_while) {
+      if (blocks.len == 0 ||
+          blocks.items[blocks.len - 1].kind != BlockKindIf) {
         ERROR(STR_FMT": `else` not inside of `if`\n", STR_ARG(current_proc->name));
         exit(1);
       }
@@ -728,9 +741,10 @@ void compile(Tokens tokens, Program *program) {
 
       compiler.var_kinds.kinds.len = block->first_var_index;
 
-      if (block->is_while)
+      if (block->kind == BlockKindWhile)
         proc_jump(current_proc, block->begin_label_name);
-      proc_add_label(current_proc, block->end_label_name);
+      if (block->kind != BlockKindProc)
+        proc_add_label(current_proc, block->end_label_name);
     } break;
 
     case TT_BREAK:
@@ -738,7 +752,7 @@ void compile(Tokens tokens, Program *program) {
       bool found_while = false;
 
       for (u32 i = blocks.len; i > 0; --i) {
-        if (blocks.items[i - 1].is_while) {
+        if (blocks.items[i - 1].kind == BlockKindWhile) {
           found_while = true;
           if (token->id == TT_BREAK)
             proc_jump(current_proc, blocks.items[i - 1].end_label_name);
