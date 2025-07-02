@@ -1,61 +1,61 @@
 macro div(a: s64, b: s64) -> r:
   r = a
-  asm "mov rax,@" a
-  asm "cqo"
-  asm "idiv @@" b
-  asm "mov @,rax" r
+  asm "mov rax,@" [a]
+  asm "cqo" []
+  asm "idiv @@" [b]
+  asm "mov @,rax" [r]
 end
 
 macro div(a: s32, b: s32) -> r:
   r = a
-  asm "mov eax,@" a
-  asm "cdq"
-  asm "idiv @@" b
-  asm "mov @,eax" r
+  asm "mov eax,@" [a]
+  asm "cdq" []
+  asm "idiv @@" [b]
+  asm "mov @,eax" [r]
 end
 
 macro div(a: s16, b: s16) -> r:
   r = a
-  asm "mov ax,@" a
-  asm "cwd"
-  asm "idiv @@" b
-  asm "mov @,ax" r
+  asm "mov ax,@" [a]
+  asm "cwd" []
+  asm "idiv @@" [b]
+  asm "mov @,ax" [r]
 end
 
 macro div(a: s8, b: s8) -> r:
   r = a
-  asm "mov al,@" a
-  asm "idiv @@" b
-  asm "mov @,al" r
+  asm "mov al,@" [a]
+  asm "idiv @@" [b]
+  asm "mov @,al" [r]
 end
 
 macro div(a: u64, b: u64) -> r:
   r = a
-  asm "mov rax,@" a
-  asm "cqo"
-  asm "div @@" b
-  asm "mov @,rax" r
+  asm "mov rax,@" [a]
+  asm "cqo" []
+  asm "div @@" [b]
+  asm "mov @,rax" [r]
 end
 
 macro div(a: u32, b: u32) -> r:
   r = a
-  asm "mov eax,@" a
-  asm "cdq"
-  asm "div @@" b
-  asm "mov @,eax" r
+  asm "mov eax,@" [a]
+  asm "cdq" []
+  asm "div @@" [b]
+  asm "mov @,eax" [r]
 end
 
 macro div(a: u16, b: u16) -> r:
   r = a
-  asm "mov ax,@" a
-  asm "cwd"
-  asm "div @@" b
-  asm "mov @,ax" r
+  asm "mov ax,@" [a]
+  asm "cwd" []
+  asm "div @@" [b]
+  asm "mov @,ax" [r]
 end
 
 macro div(a: u8, b: u8) -> r:
   r = a
-  asm "mov al,@" a
-  asm "div @@" b
-  asm "mov @,al" r
+  asm "mov al,@" [a]
+  asm "div @@" [b]
+  asm "mov @,al" [r]
 end

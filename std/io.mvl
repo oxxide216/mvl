@@ -36,41 +36,41 @@ end
 
 proc input() -> s64:
   t = input(0)
-  ret t
+  retval t
 end
 
 proc input(fd: s64) -> s64:
   buf_cap = 16
   buf_size = 0
-  size_to_alloc = !add buf_cap 1
+  size_to_alloc = !add(buf_cap, 1)
   buf = malloc(size_to_alloc)
 
-  while 1 == 1
+  while 1 == 1:
     char = inputc(fd)
-    if char == -1
+    if char == -1:
       break
     end
-    if char == '\n'
+    if char == '\n':
       break
     end
 
-    if buf_size >= buf_cap
-      buf_cap = !mul buf_cap 2
-      size_to_alloc = !add buf_cap 1
+    if buf_size >= buf_cap:
+      buf_cap = !mul(buf_cap, 2)
+      size_to_alloc = !add(buf_cap, 1)
       buf = realloc(buf, size_to_alloc)
     end
 
-    next_ptr = !add buf buf_size
+    next_ptr = !add(buf, buf_size)
     *next_ptr = char
-    buf_size = !add buf_size 1
+    buf_size = !add(buf_size, 1)
   end
 
-  ret buf
+  retval buf
 end
 
 proc inputc() -> s64:
   t = inputc(0)
-  ret t
+  retval t
 end
 
 proc inputc(fd: s64) -> s64:
@@ -80,49 +80,49 @@ proc inputc(fd: s64) -> s64:
   ref_s64 = cast s64 ref
   len = inputl(fd, ref_s64, 1)
 
-  if len == 1
-    ret char
+  if len == 1:
+    retval char
   end
 
-  ret -1
+  retval -1
 end
 
 proc inputl(buf: s64, size: s64) -> s64:
   len = read(0, buf, size)
-  ret len
+  retval len
 end
 
 proc inputl(fd: s64, buf: s64, size: s64) -> s64:
   len = read(fd, buf, size)
-  ret len
+  retval len
 end
 
 proc read_file(path: s64) -> s64:
-  if FSTAT_BUF == 0
+  if FSTAT_BUF == 0:
     FSTAT_BUF = malloc(144)
-    FSTAT_BUF_ST_SIZE_PTR = !add FSTAT_BUF 48
+    FSTAT_BUF_ST_SIZE_PTR = !add(FSTAT_BUF, 48)
   end
 
   fd = openat(AT_FDCWD, path, O_RDONLY, 0)
   fstat(fd, FSTAT_BUF)
 
   size = *s64 FSTAT_BUF_ST_SIZE_PTR
-  size_to_alloc = !add size 1
+  size_to_alloc = !add(size, 1)
   content = malloc(size_to_alloc)
 
   read(fd, content, size)
   close(fd)
 
-  end_ptr = !add content size
+  end_ptr = !add(content, size)
   *end_ptr = 0
 
-  ret content
+  retval content
 end
 
 proc write_file(path: s64, buf: s64, buf_size: s64):
-  flags = !or O_WRONLY O_CREAT
-  flags = !or flags O_TRUNC
-  mode = !or S_IRUSR S_IWUSR
+  flags = !or(O_WRONLY, O_CREAT)
+  flags = !or(flags, O_TRUNC)
+  mode = !or(S_IRUSR, S_IWUSR)
 
   fd = openat(AT_FDCWD, path, flags, mode)
   write(fd, buf, buf_size)

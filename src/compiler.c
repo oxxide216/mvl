@@ -626,24 +626,22 @@ void compile_macro_call(Compiler *compiler, Token *dest_token,
 
   Token *next = parser_peek_token(&compiler->parser, 0);
   while (next && next->id != TT_CPAREN) {
-    if (next->id != TT_COMMA) {
-      u32 arg_tokens_begin_index = compiler->parser.index;
+    u32 arg_tokens_begin_index = compiler->parser.index;
 
-      Arg arg = compile_arg(compiler);
-      ValueKind macro_param_kind = compiler_get_arg_kind(compiler, &arg, current_proc);
+    Arg arg = compile_arg(compiler);
+    ValueKind macro_param_kind = compiler_get_arg_kind(compiler, &arg, current_proc);
 
-      MacroParam macro_param = {0};
-      macro_param.kind_group.kinds.items = aalloc(sizeof(ValueKind));
-      macro_param.kind_group.kinds.items[0] = macro_param_kind;
-      macro_param.kind_group.kinds.len = 1;
-      macro_param.kind_group.kinds.cap = 1;
-      DA_APPEND(macro_params, macro_param);
+    MacroParam macro_param = {0};
+    macro_param.kind_group.kinds.items = aalloc(sizeof(ValueKind));
+    macro_param.kind_group.kinds.items[0] = macro_param_kind;
+    macro_param.kind_group.kinds.len = 1;
+    macro_param.kind_group.kinds.cap = 1;
+    DA_APPEND(macro_params, macro_param);
 
-      u32 arg_tokens_len = compiler->parser.index - arg_tokens_begin_index;
-      for (u32 i = 0; i < arg_tokens_len; ++i) {
-        Token *token = compiler->parser.tokens.items + arg_tokens_begin_index + i;
-        DA_APPEND(arg_tokens, *token);
-      }
+    u32 arg_tokens_len = compiler->parser.index - arg_tokens_begin_index;
+    for (u32 i = 0; i < arg_tokens_len; ++i) {
+      Token *token = compiler->parser.tokens.items + arg_tokens_begin_index + i;
+      DA_APPEND(arg_tokens, *token);
     }
 
     next = parser_peek_token(&compiler->parser, 0);

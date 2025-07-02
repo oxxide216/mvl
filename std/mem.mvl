@@ -1,36 +1,36 @@
 include "str.mvl"
 
 proc malloc(size: s64) -> s64:
-  size = !add size 8
+  size = !add(size, 8)
 
-  PROT = !or PROT_READ PROT_WRITE
-  FLAGS = !or MAP_PRIVATE MAP_ANONYMOUS
+  PROT = !or(PROT_READ, PROT_WRITE)
+  FLAGS = !or(MAP_PRIVATE, MAP_ANONYMOUS)
 
   ptr = mmap(0, size, PROT, FLAGS, -1, 0)
 
-  if ptr < 0
-    ret 0
+  if ptr < 0:
+    retval 0
   end
 
   *ptr = size
-  ptr = !add ptr 8
+  ptr = !add(ptr, 8)
 
-  ret ptr
+  retval ptr
 end
 
 proc realloc(ptr: s64, size: s64) -> s64:
-  size_ptr = !sub ptr 8
+  size_ptr = !sub(ptr, 8)
   size = *s64 size_ptr
 
   new_ptr = malloc(size)
   memcopy(new_ptr, ptr, size)
   free(ptr)
 
-  ret new_ptr
+  retval new_ptr
 end
 
 proc free(ptr: s64):
-  ptr = !sub ptr 8
+  ptr = !sub(ptr, 8)
   size = *s64 ptr
   munmap(ptr, size)
 end
@@ -40,46 +40,46 @@ proc memcopy(dest: s64, src: s64, size: s64):
   dest_ptr = dest
   src_ptr = src
 
-  while i < size
+  while i < size:
     byte = *s8 src_ptr
     *dest_ptr = byte
 
-    i = !add i 1
-    dest_ptr = !add dest_ptr 1
-    src_ptr = !add src_ptr 1
+    i = !add(i, 1)
+    dest_ptr = !add(dest_ptr, 1)
+    src_ptr = !add(src_ptr, 1)
   end
 end
 
 proc memmove(dest: s64, src: s64, size: s64):
-  if size == 0
+  if size == 0:
     ret
   end
 
-  if dest > src
-    i = !sub size 1
-    dest_ptr = !add dest i
-    src_ptr = !add src i
+  if dest > src:
+    i = !sub(size, 1)
+    dest_ptr = !add(dest, i)
+    src_ptr = !add(src, i)
 
-    while i >= 0
+    while i >= 0:
       byte = *u8 src_ptr
       *dest_ptr = byte
 
-      i = !sub i 1
-      dest_ptr = !sub dest_ptr 1
-      src_ptr = !sub src_ptr 1
+      i = !sub(i, 1)
+      dest_ptr = !sub(dest_ptr, 1)
+      src_ptr = !sub(src_ptr, 1)
     end
-  else
+  else:
     i = 0
     dest_ptr = dest
     src_ptr = src
 
-    while i < size
+    while i < size:
       byte = *u8 src_ptr
       *dest_ptr = byte
 
-      i = !add i 1
-      dest_ptr = !add dest_ptr 1
-      src_ptr = !add src_ptr 1
+      i = !add(i, 1)
+      dest_ptr = !add(dest_ptr, 1)
+      src_ptr = !add(src_ptr, 1)
     end
   end
 end

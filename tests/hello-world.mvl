@@ -1,4 +1,5 @@
 include "../std/io.mvl"
 
-proc main
+proc main():
   println("Hello, world!")
+end
