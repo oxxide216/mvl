@@ -1,53 +1,53 @@
-macro mul a: s64 b: s64 -> r
+macro mul(a: s64, b: s64) -> r:
   r = a
   asm "mov rax,@" a
   asm "imul @@" b
   asm "mov @,rax" r
 end
 
-macro mul a: s32 b: s32 -> r
+macro mul(a: s32, b: s32) -> r:
   r = a
   asm "mov eax,@" a
   asm "imul @@" b
   asm "mov @,eax" r
 end
 
-macro mul a: s16 b: s16 -> r
+macro mul(a: s16, b: s16) -> r:
   r = a
   asm "mov ax,@" a
   asm "imul @@" b
   asm "mov @,ax" r
 end
 
-macro mul a: s8 b: s8 -> r
+macro mul(a: s8, b: s8) -> r:
   r = a
   asm "mov al,@" a
   asm "imul @@" b
   asm "mov @,al" r
 end
 
-macro mul a: u64 b: s64 -> r
+macro mul(a: u64, b: s64) -> r:
   r = a
   asm "mov rax,@" a
   asm "mul @@" b
   asm "mov @,rax" r
 end
 
-macro mul a: u32 b: u32 -> r
+macro mul(a: u32, b: u32) -> r:
   r = a
   asm "mov eax,@" a
   asm "mul @@" b
   asm "mov @,eax" r
 end
 
-macro mul a: u16 b: u16 -> r
+macro mul(a: u16, b: u16) -> r:
   r = a
   asm "mov ax,@" a
   asm "mul @@" b
   asm "mov @,ax" r
 end
 
-macro mul a: u8 b: u8 -> r
+macro mul(a: u8, b: u8) -> r:
   r = a
   asm "mov al,@" a
   asm "mul @@" b

@@ -30,44 +30,44 @@ static S_IROTH = 4
 static S_IWOTH = 2
 static S_IXOTH = 1
 
-proc exit code: s64
+proc exit(code: s64):
   asm "mov rax,60"
   asm "syscall"
 end
 
-proc write fd: s64 str: s64 len: s64
+proc write(fd: s64, str: s64, len: s64):
   asm "mov rax,1"
   asm "syscall"
 end
 
-proc naked read fd: s64 buf: s64 size: s64 -> s64
+proc naked read(fd: s64, buf: s64, size: s64) -> s64:
   asm "mov rax,0"
   asm "syscall"
 end
 
-proc naked mmap addr: s64 len: s64 prot: s64 flags: s64 fildes: s64 off: s64 -> s64
+proc naked mmap(addr: s64, len: s64, prot: s64, flags: s64, fildes: s64, off: s64) -> s64:
   asm "mov r10,rcx"
   asm "mov rax,9"
   asm "syscall"
 end
 
-proc munmap ptr: s64 size: s64
+proc munmap(ptr: s64, size: s64):
   asm "mov rax,11"
   asm "syscall"
 end
 
-proc naked openat dirfd: s64 pathname: s64 flags: s64 mode: s64 -> s64
+proc naked openat(dirfd: s64, pathname: s64, flags: s64, mode: s64) -> s64:
   asm "mov r10,rcx"
   asm "mov rax,257"
   asm "syscall"
 end
 
-proc close fd: s64
+proc close(fd: s64):
   asm "mov rax,3"
   asm "syscall"
 end
 
-proc fstat fd: s64 buf: s64
+proc fstat(fd: s64, buf: s64):
   asm "mov rax,5"
   asm "syscall"
 end

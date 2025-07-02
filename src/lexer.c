@@ -72,7 +72,12 @@ void lex(Str text, Tokens *tokens, Str file_path) {
     if (token_id == TT_NEWLINE) {
       ++row;
       col = 0;
+
+      continue;
     }
+
+    if (token_id == TT_WHITESPACE)
+      continue;
 
     if (token_id == TT_COMMENT) {
       u32 i = 0;
@@ -94,9 +99,6 @@ void lex(Str text, Tokens *tokens, Str file_path) {
 
       continue;
     }
-
-    if (token_id == TT_WHITESPACE)
-      continue;
 
     if (token_id == TT_STR_LIT) {
       u32 i = 0;

@@ -1,6 +1,6 @@
 include "mem.mvl"
 
-proc strlen str: s64 -> s64
+proc strlen(str: s64) -> s64:
   i = 0
 
   ptr = !add str i
@@ -15,7 +15,7 @@ proc strlen str: s64 -> s64
   ret i
 end
 
-proc streq a: s64 b: s64 -> s64
+proc streq(a: s64, b: s64) -> s64:
   a_len = strlen(a)
   b_len = strlen(b)
 
@@ -39,7 +39,7 @@ proc streq a: s64 b: s64 -> s64
   ret 1
 end
 
-proc s64_to_str num: s64 -> s64
+proc s64_to_str(num: s64) -> s64:
   buf_cap = 1
   buf_size = 0
   size_to_alloc = !add buf_cap 1
@@ -95,7 +95,7 @@ proc s64_to_str num: s64 -> s64
   ret buf
 end
 
-proc str_to_s64 str: s64 -> s64
+proc str_to_s64(str: s64) -> s64:
   num = 0
   is_neg = 0
   i = 0

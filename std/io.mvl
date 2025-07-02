@@ -6,40 +6,40 @@ include "math.mvl"
 static FSTAT_BUF = 0
 static FSTAT_BUF_ST_SIZE_PTR = 0
 
-proc println str: s64
+proc println(str: s64):
   print(str)
   printl("\n", 1)
 end
 
-proc println fd: s64 str: s64
+proc println(fd: s64, str: s64):
   print(fd, str)
   printl(fd, "\n", 1)
 end
 
-proc print str: s64
+proc print(str: s64):
   len = strlen(str)
   printl(1, str, len)
 end
 
-proc print fd: s64 str: s64
+proc print(fd: s64, str: s64):
   len = strlen(str)
   printl(fd, str, len)
 end
 
-proc printl str: s64 len: s64
+proc printl(str: s64, len: s64):
   write(1, str, len)
 end
 
-proc printl fd: s64 str: s64 len: s64
+proc printl(fd: s64, str: s64, len: s64):
   write(fd, str, len)
 end
 
-proc input -> s64
+proc input() -> s64:
   t = input(0)
   ret t
 end
 
-proc input fd: s64 -> s64
+proc input(fd: s64) -> s64:
   buf_cap = 16
   buf_size = 0
   size_to_alloc = !add buf_cap 1
@@ -68,12 +68,12 @@ proc input fd: s64 -> s64
   ret buf
 end
 
-proc inputc -> s64
+proc inputc() -> s64:
   t = inputc(0)
   ret t
 end
 
-proc inputc fd: s64 -> s64
+proc inputc(fd: s64) -> s64:
   char = 0
 
   ref = &char
@@ -87,17 +87,17 @@ proc inputc fd: s64 -> s64
   ret -1
 end
 
-proc inputl buf: s64 size: s64 -> s64
+proc inputl(buf: s64, size: s64) -> s64:
   len = read(0, buf, size)
   ret len
 end
 
-proc inputl fd: s64 buf: s64 size: s64 -> s64
+proc inputl(fd: s64, buf: s64, size: s64) -> s64:
   len = read(fd, buf, size)
   ret len
 end
 
-proc read_file path: s64 -> s64
+proc read_file(path: s64) -> s64:
   if FSTAT_BUF == 0
     FSTAT_BUF = malloc(144)
     FSTAT_BUF_ST_SIZE_PTR = !add FSTAT_BUF 48
@@ -119,7 +119,7 @@ proc read_file path: s64 -> s64
   ret content
 end
 
-proc write_file path: s64 buf: s64 buf_size: s64
+proc write_file(path: s64, buf: s64, buf_size: s64):
   flags = !or O_WRONLY O_CREAT
   flags = !or flags O_TRUNC
   mode = !or S_IRUSR S_IWUSR

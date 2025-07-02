@@ -2,32 +2,32 @@ include "math/mul.mvl"
 include "math/div.mvl"
 include "math/mod.mvl"
 
-macro add a b -> r
+macro add(a, b) -> r:
   r = a
-  asm "add @,@@" r b
+  asm "add @,@@" [r, b]
 end
 
-macro sub a b -> r
+macro sub(a, b) -> r:
   r = a
-  asm "sub @,@@" r b
+  asm "sub @,@@" [r, b]
 end
 
-macro neg a -> r
+macro neg(a) -> r:
   r = a
-  asm "neg @" r
+  asm "neg @" [r]
 end
 
-macro or a b -> r
+macro or(a, b) -> r:
   r = a
-  asm "or @,@@" r b
+  asm "or @,@@" [r, b]
 end
 
-macro and a b -> r
+macro and(a, b) -> r:
   r = a
-  asm "and @,@@" r b
+  asm "and @,@@" [r, b]
 end
 
-macro xor a b -> r
+macro xor(a, b) -> r:
   r = a
-  asm "xor @,@@" r b
+  asm "xor @,@@" [r, b]
 end
