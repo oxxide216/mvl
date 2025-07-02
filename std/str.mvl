@@ -16,8 +16,8 @@ proc strlen str: s64 -> s64
 end
 
 proc streq a: s64 b: s64 -> s64
-  a_len = @strlen a
-  b_len = @strlen b
+  a_len = strlen(a)
+  b_len = strlen(b)
 
   if a_len != b_len
     ret 0
@@ -43,7 +43,7 @@ proc s64_to_str num: s64 -> s64
   buf_cap = 1
   buf_size = 0
   size_to_alloc = !add buf_cap 1
-  buf = @malloc size_to_alloc
+  buf = malloc(size_to_alloc)
   is_neg = 0
 
   if num < 0
@@ -57,7 +57,7 @@ proc s64_to_str num: s64 -> s64
     if buf_size >= buf_cap
       buf_cap = !mul buf_cap 2
       size_to_alloc = !add buf_cap 1
-      buf = @realloc buf size_to_alloc
+      buf = realloc(buf, size_to_alloc)
     end
 
     digit = !mod num 10

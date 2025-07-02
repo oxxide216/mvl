@@ -7,35 +7,35 @@ static FSTAT_BUF = 0
 static FSTAT_BUF_ST_SIZE_PTR = 0
 
 proc println str: s64
-  @print str
-  @printl "\n" 1
+  print(str)
+  printl("\n", 1)
 end
 
 proc println fd: s64 str: s64
-  @print fd str
-  @printl fd "\n" 1
+  print(fd, str)
+  printl(fd, "\n", 1)
 end
 
 proc print str: s64
-  len = @strlen str
-  @printl 1 str len
+  len = strlen(str)
+  printl(1, str, len)
 end
 
 proc print fd: s64 str: s64
-  len = @strlen str
-  @printl fd str len
+  len = strlen(str)
+  printl(fd, str, len)
 end
 
 proc printl str: s64 len: s64
-  @write 1 str len
+  write(1, str, len)
 end
 
 proc printl fd: s64 str: s64 len: s64
-  @write fd str len
+  write(fd, str, len)
 end
 
 proc input -> s64
-  t = @input 0
+  t = input(0)
   ret t
 end
 
@@ -43,10 +43,10 @@ proc input fd: s64 -> s64
   buf_cap = 16
   buf_size = 0
   size_to_alloc = !add buf_cap 1
-  buf = @malloc size_to_alloc
+  buf = malloc(size_to_alloc)
 
   while 1 == 1
-    char = @inputc fd
+    char = inputc(fd)
     if char == -1
       break
     end
@@ -57,7 +57,7 @@ proc input fd: s64 -> s64
     if buf_size >= buf_cap
       buf_cap = !mul buf_cap 2
       size_to_alloc = !add buf_cap 1
-      buf = @realloc buf size_to_alloc
+      buf = realloc(buf, size_to_alloc)
     end
 
     next_ptr = !add buf buf_size
@@ -69,7 +69,7 @@ proc input fd: s64 -> s64
 end
 
 proc inputc -> s64
-  t = @inputc 0
+  t = inputc(0)
   ret t
 end
 
@@ -78,7 +78,7 @@ proc inputc fd: s64 -> s64
 
   ref = &char
   ref_s64 = cast s64 ref
-  len = @inputl fd ref_s64 1
+  len = inputl(fd, ref_s64, 1)
 
   if len == 1
     ret char
@@ -88,30 +88,30 @@ proc inputc fd: s64 -> s64
 end
 
 proc inputl buf: s64 size: s64 -> s64
-  len = @read 0 buf size
+  len = read(0, buf, size)
   ret len
 end
 
 proc inputl fd: s64 buf: s64 size: s64 -> s64
-  len = @read fd buf size
+  len = read(fd, buf, size)
   ret len
 end
 
 proc read_file path: s64 -> s64
   if FSTAT_BUF == 0
-    FSTAT_BUF = @malloc 144
+    FSTAT_BUF = malloc(144)
     FSTAT_BUF_ST_SIZE_PTR = !add FSTAT_BUF 48
   end
 
-  fd = @openat AT_FDCWD path O_RDONLY 0
-  @fstat fd FSTAT_BUF
+  fd = openat(AT_FDCWD, path, O_RDONLY, 0)
+  fstat(fd, FSTAT_BUF)
 
   size = *s64 FSTAT_BUF_ST_SIZE_PTR
   size_to_alloc = !add size 1
-  content = @malloc size_to_alloc
+  content = malloc(size_to_alloc)
 
-  @read fd content size
-  @close fd
+  read(fd, content, size)
+  close(fd)
 
   end_ptr = !add content size
   *end_ptr = 0
@@ -124,7 +124,7 @@ proc write_file path: s64 buf: s64 buf_size: s64
   flags = !or flags O_TRUNC
   mode = !or S_IRUSR S_IWUSR
 
-  fd = @openat AT_FDCWD path flags mode
-  @write fd buf buf_size
-  @close fd
+  fd = openat(AT_FDCWD, path, flags, mode)
+  write(fd, buf, buf_size)
+  close(fd)
 end

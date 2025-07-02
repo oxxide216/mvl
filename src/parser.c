@@ -34,7 +34,6 @@ static Str token_id_names[] = {
   STR_LIT("`(`"),
   STR_LIT("`)`"),
   STR_LIT("`,`"),
-  STR_LIT("`@`"),
   STR_LIT("`:`"),
   STR_LIT("`==`"),
   STR_LIT("`!=`"),
@@ -50,15 +49,15 @@ static Str token_id_names[] = {
   STR_LIT("`$`"),
 };
 
-Token *parser_peek_token(Parser *parser) {
-  if (parser->index >= parser->tokens.len)
+Token *parser_peek_token(Parser *parser, u32 offset) {
+  if (parser->index + offset >= parser->tokens.len)
     return NULL;
 
-  return parser->tokens.items + parser->index;
+  return parser->tokens.items + parser->index + offset;
 }
 
 Token *parser_next_token(Parser *parser) {
-  Token *token = parser_peek_token(parser);
+  Token *token = parser_peek_token(parser, 0);
   ++parser->index;
   return token;
 }

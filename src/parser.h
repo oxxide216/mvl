@@ -12,7 +12,7 @@ typedef struct {
   u32     index;
 } Parser;
 
-Token    *parser_peek_token(Parser *parser);
+Token    *parser_peek_token(Parser *parser, u32 offset);
 Token    *parser_next_token(Parser *parser);
 void      print_id_mask(u64 id_mask, Str lexeme, FILE *stream);
 void      expect_token(Token *token, u64 id_mask);

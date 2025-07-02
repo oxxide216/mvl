@@ -6,7 +6,7 @@ proc malloc size: s64 -> s64
   PROT = !or PROT_READ PROT_WRITE
   FLAGS = !or MAP_PRIVATE MAP_ANONYMOUS
 
-  ptr = @mmap 0 size PROT FLAGS -1 0
+  ptr = mmap(0, size, PROT, FLAGS, -1, 0)
 
   if ptr < 0
     ret 0
@@ -22,9 +22,9 @@ proc realloc ptr: s64 size: s64 -> s64
   size_ptr = !sub ptr 8
   size = *s64 size_ptr
 
-  new_ptr = @malloc size
-  @memcopy new_ptr ptr size
-  @free ptr
+  new_ptr = malloc(size)
+  memcopy(new_ptr, ptr, size)
+  free(ptr)
 
   ret new_ptr
 end
@@ -32,7 +32,7 @@ end
 proc free ptr: s64
   ptr = !sub ptr 8
   size = *s64 ptr
-  @munmap ptr size
+  munmap(ptr, size)
 end
 
 proc memcopy dest: s64 src: s64 size: s64

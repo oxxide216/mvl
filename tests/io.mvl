@@ -1,0 +1,6 @@
+include "../std/io.mvl"
+
+proc main
+  input = input()
+  println(input)
+end

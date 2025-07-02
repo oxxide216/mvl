@@ -254,33 +254,43 @@ static Arg compile_arg(Compiler *compiler) {
   return token_to_arg(arg, compiler);
 }
 
-static void compile_call(Compiler *compiler, Str dest,
+static void compile_call(Compiler *compiler, Str dest, Str callee_name,
                          Procedure *current_proc, u32 caller_id) {
-  Token *callee_name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
   Args args = {0};
   ValueKinds param_kinds = {0};
 
-  while (parser_peek_token(&compiler->parser) &&
-         parser_peek_token(&compiler->parser)->id != TT_NEWLINE) {
+  Token *next = parser_peek_token(&compiler->parser, 0);
+  while (next && next->id != TT_CPAREN) {
     Arg arg = compile_arg(compiler);
     args_push_arg(&args, arg);
 
     ValueKind param_kind = compiler_get_arg_kind(compiler, &arg, current_proc);
     DA_APPEND(param_kinds, param_kind);
+
+    next = parser_peek_token(&compiler->parser, 0);
+    if (next->id == TT_COMMA) {
+      parser_next_token(&compiler->parser);
+      next = parser_peek_token(&compiler->parser, 0);
+    } else if (next->id != TT_CPAREN) {
+      parser_expect_token(&compiler->parser, MASK(TT_COMMA) |
+                                             MASK(TT_CPAREN));
+    }
   }
 
-  u32 callee_id = get_proc_id(compiler, callee_name_token->lexeme,
+  parser_expect_token(&compiler->parser, MASK(TT_CPAREN));
+
+  u32 callee_id = get_proc_id(compiler, callee_name,
                               param_kinds, caller_id);
-  Str callee_name = get_proc_hashed_name(compiler, callee_id);
+  Str hashed_callee_name = get_proc_hashed_name(compiler, callee_id);
 
   if (dest.len > 0) {
     ValueKind param_kind = get_proc_ret_val_kind(compiler, callee_id);
     VariableKind var_kind = { dest, param_kind };
     DA_APPEND(compiler->var_kinds.kinds, var_kind);
 
-    proc_call_assign(current_proc, dest, callee_name, args);
+    proc_call_assign(current_proc, dest, hashed_callee_name, args);
   } else {
-    proc_call(current_proc, callee_name, args);
+    proc_call(current_proc, hashed_callee_name, args);
   }
 }
 
@@ -332,7 +342,7 @@ KindGroup *get_kind_group(KindGroups *kind_groups, Str name) {
 void collect_defs(Compiler *compiler) {
   define_proc(compiler, STR_LIT("init"), ValueKindUnit, (ValueKinds) {0});
 
-  while (parser_peek_token(&compiler->parser)) {
+  while (parser_peek_token(&compiler->parser, 0)) {
     Token *token = parser_next_token(&compiler->parser);
 
     if (token->id == TT_PROC) {
@@ -345,7 +355,7 @@ void collect_defs(Compiler *compiler) {
       ValueKind ret_val_kind = ValueKindUnit;
       ValueKinds param_kinds = {0};
 
-      Token *next = parser_peek_token(&compiler->parser);
+      Token *next = parser_peek_token(&compiler->parser, 0);
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
         parser_expect_token(&compiler->parser, MASK(TT_IDENT));
         parser_expect_token(&compiler->parser, MASK(TT_COLON));
@@ -354,7 +364,7 @@ void collect_defs(Compiler *compiler) {
         ValueKind param_kind = str_to_value_kind(param_kind_token->lexeme);
         DA_APPEND(param_kinds, param_kind);
 
-        next = parser_peek_token(&compiler->parser);
+        next = parser_peek_token(&compiler->parser, 0);
       }
 
       if (next && next->id == TT_RIGHT_ARROW) {
@@ -378,13 +388,13 @@ void collect_defs(Compiler *compiler) {
       Token *name = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
       macro.name = name->lexeme;
 
-      Token *next = parser_peek_token(&compiler->parser);
+      Token *next = parser_peek_token(&compiler->parser, 0);
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
         Token *param_name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
 
         KindGroup param_kind_group = {0};
-        if (parser_peek_token(&compiler->parser) &&
-            parser_peek_token(&compiler->parser)->id == TT_COLON) {
+        if (parser_peek_token(&compiler->parser, 0) &&
+            parser_peek_token(&compiler->parser, 0)->id == TT_COLON) {
           parser_next_token(&compiler->parser);
           Token *param_kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
           KindGroup *param_kind_group_ptr = get_kind_group(&compiler->kind_groups,
@@ -400,7 +410,7 @@ void collect_defs(Compiler *compiler) {
         MacroParam macro_param = { param_name_token->lexeme, param_kind_group };
         DA_APPEND(macro.params, macro_param);
 
-        next = parser_peek_token(&compiler->parser);
+        next = parser_peek_token(&compiler->parser, 0);
       }
 
       parser_next_token(&compiler->parser);
@@ -424,7 +434,7 @@ void collect_defs(Compiler *compiler) {
 
       parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
 
-      while (parser_peek_token(&compiler->parser)) {
+      while (parser_peek_token(&compiler->parser, 0)) {
         Token *token = parser_next_token(&compiler->parser);
 
         if (token->id == TT_IF ||
@@ -454,8 +464,8 @@ void collect_defs(Compiler *compiler) {
 
       parser_expect_token(&compiler->parser, MASK(TT_PUT));
 
-      while (parser_peek_token(&compiler->parser) &&
-             parser_peek_token(&compiler->parser)->id != TT_NEWLINE) {
+      while (parser_peek_token(&compiler->parser, 0) &&
+             parser_peek_token(&compiler->parser, 0)->id != TT_NEWLINE) {
         Token *kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
         ValueKind kind = str_to_value_kind(kind_token->lexeme);
         DA_APPEND(kind_group.kinds, kind);
@@ -470,8 +480,8 @@ void collect_defs(Compiler *compiler) {
 
       parser_expect_token(&compiler->parser, MASK(TT_NEWLINE));
 
-      while (parser_peek_token(&compiler->parser) &&
-             parser_peek_token(&compiler->parser)->id != TT_END) {
+      while (parser_peek_token(&compiler->parser, 0) &&
+             parser_peek_token(&compiler->parser, 0)->id != TT_END) {
         Token *field_name_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
         parser_expect_token(&compiler->parser, MASK(TT_COLON));
         Token *field_kind_token = parser_expect_token(&compiler->parser, MASK(TT_IDENT));
@@ -564,7 +574,7 @@ void compile_macro_call(Compiler *compiler, Token *dest_token,
   MacroParams macro_params = {0};
   u32 arg_tokens_begin_index = compiler->parser.index;
 
-  Token *next = parser_peek_token(&compiler->parser);
+  Token *next = parser_peek_token(&compiler->parser, 0);
   while (next && next->id != TT_NEWLINE) {
     Arg arg = compile_arg(compiler);
     ValueKind macro_param_kind = compiler_get_arg_kind(compiler, &arg, current_proc);
@@ -576,7 +586,7 @@ void compile_macro_call(Compiler *compiler, Token *dest_token,
     macro_param.kind_group.kinds.cap = 1;
     DA_APPEND(macro_params, macro_param);
 
-    next = parser_peek_token(&compiler->parser);
+    next = parser_peek_token(&compiler->parser, 0);
   }
 
   Token *arg_tokens_begin = compiler->parser.tokens.items + arg_tokens_begin_index;
@@ -636,7 +646,7 @@ void compile(Tokens tokens, Program *program) {
 
   collect_defs(&compiler);
 
-  while (parser_peek_token(&compiler.parser)) {
+  while (parser_peek_token(&compiler.parser, 0)) {
     Token *token = parser_expect_token(&compiler.parser, MASK(TT_NEWLINE) |
                                                          MASK(TT_PROC) |
                                                          MASK(TT_IF) |
@@ -647,7 +657,6 @@ void compile(Tokens tokens, Program *program) {
                                                          MASK(TT_CONTINUE) |
                                                          MASK(TT_RET) |
                                                          MASK(TT_IDENT) |
-                                                         MASK(TT_AT) |
                                                          MASK(TT_INCLUDE) |
                                                          MASK(TT_STATIC) |
                                                          MASK(TT_ASM) |
@@ -695,7 +704,7 @@ void compile(Tokens tokens, Program *program) {
 
       compiler.var_kinds.kinds.len = 0;
 
-      Token *next = parser_peek_token(&compiler.parser);
+      Token *next = parser_peek_token(&compiler.parser, 0);
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
         Token *param_name_token = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
         parser_expect_token(&compiler.parser, MASK(TT_COLON));
@@ -710,7 +719,7 @@ void compile(Tokens tokens, Program *program) {
         ProcParam proc_param = { param_name_token->lexeme, param_kind };
         DA_APPEND(params, proc_param);
 
-        next = parser_peek_token(&compiler.parser);
+        next = parser_peek_token(&compiler.parser, 0);
       }
 
       if (next && next->id == TT_RIGHT_ARROW) {
@@ -846,7 +855,7 @@ void compile(Tokens tokens, Program *program) {
     } break;
 
     case TT_RET: {
-      Token *next = parser_peek_token(&compiler.parser);
+      Token *next = parser_peek_token(&compiler.parser, 0);
       if (!next || next->id == TT_NEWLINE) {
         proc_return(current_proc);
       } else {
@@ -857,20 +866,21 @@ void compile(Tokens tokens, Program *program) {
 
     case TT_IDENT: {
       Token *next = parser_expect_token(&compiler.parser, MASK(TT_PUT) |
-                                                          MASK(TT_COLON));
+                                                          MASK(TT_COLON) |
+                                                          MASK(TT_OPAREN));
+
       if (next->id == TT_COLON) {
         proc_add_label(current_proc, token->lexeme);
         break;
       }
 
-      next = parser_peek_token(&compiler.parser);
+      if (next && next->id == TT_OPAREN) {
+        compile_call(&compiler, (Str) {0}, token->lexeme, current_proc, current_proc_id);
 
-      if (next && next->id == TT_AT) {
-        parser_next_token(&compiler.parser);
-
-        compile_call(&compiler, token->lexeme, current_proc, current_proc_id);
         break;
       }
+
+      next = parser_peek_token(&compiler.parser, 0);
 
       if (next && next->id == TT_REF) {
         parser_next_token(&compiler.parser);
@@ -928,8 +938,8 @@ void compile(Tokens tokens, Program *program) {
         Args args = {0};
         ValueKinds param_kinds = {0};
 
-        while (parser_peek_token(&compiler.parser) &&
-               parser_peek_token(&compiler.parser)->id != TT_NEWLINE) {
+        while (parser_peek_token(&compiler.parser, 0) &&
+               parser_peek_token(&compiler.parser, 0)->id != TT_NEWLINE) {
           Arg arg = compile_arg(&compiler);
           args_push_arg(&args, arg);
 
@@ -963,6 +973,19 @@ void compile(Tokens tokens, Program *program) {
         break;
       }
 
+      next = parser_peek_token(&compiler.parser, 0);
+      if (next && next->id == TT_IDENT) {
+        next = parser_peek_token(&compiler.parser, 1);
+        if (next && next->id == TT_OPAREN) {
+          next = parser_next_token(&compiler.parser);
+          parser_next_token(&compiler.parser);
+
+          compile_call(&compiler, token->lexeme, next->lexeme, current_proc, current_proc_id);
+
+          break;
+        }
+      }
+
       Arg arg = compile_arg(&compiler);
 
       ValueKind param_kind = compiler_get_arg_kind(&compiler, &arg, current_proc);
@@ -970,10 +993,6 @@ void compile(Tokens tokens, Program *program) {
       DA_APPEND(compiler.var_kinds.kinds, var_kind);
 
       proc_assign(current_proc, token->lexeme, arg);
-    } break;
-
-    case TT_AT: {
-      compile_call(&compiler, (Str) {0}, current_proc, current_proc_id);
     } break;
 
     case TT_INCLUDE: {
@@ -993,8 +1012,8 @@ void compile(Tokens tokens, Program *program) {
       Token *text_token = parser_expect_token(&compiler.parser, MASK(TT_STR_LIT));
 
       Da(Arg) args = {0};
-      while (parser_peek_token(&compiler.parser) &&
-             parser_peek_token(&compiler.parser)->id != TT_NEWLINE) {
+      while (parser_peek_token(&compiler.parser, 0) &&
+             parser_peek_token(&compiler.parser, 0)->id != TT_NEWLINE) {
         Arg arg = compile_arg(&compiler);
         DA_APPEND(args, arg);
       }
@@ -1047,17 +1066,17 @@ void compile(Tokens tokens, Program *program) {
     case TT_MACRO: {
       Token *name = parser_expect_token(&compiler.parser, MASK(TT_IDENT));
 
-      Token *next = parser_peek_token(&compiler.parser);
+      Token *next = parser_peek_token(&compiler.parser, 0);
       while (next && next->id != TT_NEWLINE && next->id != TT_RIGHT_ARROW) {
         parser_expect_token(&compiler.parser, MASK(TT_IDENT));
 
-        if (parser_peek_token(&compiler.parser) &&
-            parser_peek_token(&compiler.parser)->id == TT_COLON) {
+        if (parser_peek_token(&compiler.parser, 0) &&
+            parser_peek_token(&compiler.parser, 0)->id == TT_COLON) {
           parser_next_token(&compiler.parser);
           parser_expect_token(&compiler.parser, MASK(TT_IDENT));
         }
 
-        next = parser_peek_token(&compiler.parser);
+        next = parser_peek_token(&compiler.parser, 0);
       }
 
       parser_next_token(&compiler.parser);
@@ -1069,7 +1088,7 @@ void compile(Tokens tokens, Program *program) {
 
       u32 recursion_level = 1;
 
-      while (parser_peek_token(&compiler.parser)) {
+      while (parser_peek_token(&compiler.parser, 0)) {
         Token *token = parser_next_token(&compiler.parser);
 
         if (token->id == TT_IF || token->id == TT_WHILE) {
@@ -1097,8 +1116,8 @@ void compile(Tokens tokens, Program *program) {
       parser_expect_token(&compiler.parser, MASK(TT_IDENT));
       parser_expect_token(&compiler.parser, MASK(TT_PUT));
 
-      while (parser_peek_token(&compiler.parser) &&
-             parser_peek_token(&compiler.parser)->id != TT_NEWLINE)
+      while (parser_peek_token(&compiler.parser, 0) &&
+             parser_peek_token(&compiler.parser, 0)->id != TT_NEWLINE)
         parser_expect_token(&compiler.parser, MASK(TT_IDENT));
     } break;
 
@@ -1106,8 +1125,8 @@ void compile(Tokens tokens, Program *program) {
       parser_expect_token(&compiler.parser, MASK(TT_IDENT));
       parser_expect_token(&compiler.parser, MASK(TT_NEWLINE));
 
-      while (parser_peek_token(&compiler.parser) &&
-             parser_peek_token(&compiler.parser)->id != TT_END) {
+      while (parser_peek_token(&compiler.parser, 0) &&
+             parser_peek_token(&compiler.parser, 0)->id != TT_END) {
         parser_expect_token(&compiler.parser, MASK(TT_IDENT));
         parser_expect_token(&compiler.parser, MASK(TT_COLON));
         parser_expect_token(&compiler.parser, MASK(TT_IDENT));
@@ -1123,7 +1142,7 @@ void compile(Tokens tokens, Program *program) {
     }
     }
 
-    if (expect_new_line && parser_peek_token(&compiler.parser))
+    if (expect_new_line && parser_peek_token(&compiler.parser, 0))
       parser_expect_token(&compiler.parser, MASK(TT_NEWLINE));
   }
 

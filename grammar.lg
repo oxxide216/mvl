@@ -27,7 +27,6 @@ number=\-?0-9+(a-z0-9+)?
 oparen=\(
 cparen=\)
 comma=,
-at=@
 colon=:
 eq===
 ne=!=
