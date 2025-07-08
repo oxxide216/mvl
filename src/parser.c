@@ -12,6 +12,7 @@
 typedef enum {
   BlockKindProc = 0,
   BlockKindIf,
+  BlockKindWhile,
 } BlockKind;
 
 typedef struct {
@@ -328,12 +329,12 @@ static IrProc parser_parse_proc_def(Parser *parser) {
 
     if (token->id == TT_COMMA) {
       token = parser_peek_token(parser, 0);
-      if (token->id == TT_CPAREN) {
-        parser_next_token(parser);
+      if (token->id == TT_CPAREN)
         break;
-      }
     }
   }
+
+  parser_expect_token(parser, MASK(TT_CPAREN));
 
   token = parser_peek_token(parser, 0);
   if (token->id == TT_RIGHT_ARROW) {
@@ -395,7 +396,8 @@ IrProcs parse(Tokens tokens) {
       DA_APPEND(parser.blocks, new_block);
     } break;
 
-    case TT_IF: {
+    case TT_IF:
+    case TT_WHILE: {
       IrArg arg0 = parser_parse_arg(&parser);
       RelOp rel_op = parser_parse_rel_op(&parser);
       IrArg arg1 = parser_parse_arg(&parser);
@@ -405,10 +407,19 @@ IrProcs parse(Tokens tokens) {
       ++recursion_level;
 
       Str end_label_name = gen_label_name(parser.max_labels_count++);
-      Block new_block = { BlockKindIf, end_label_name };
-      DA_APPEND(parser.blocks, new_block);
+      Block new_block;
+      IrInstr instr;
 
-      IrInstr instr = { IrInstrKindIf, { ._if = { arg0, arg1, rel_op, end_label_name } } };
+
+      if (token->id == TT_IF) {
+        new_block = (Block) { BlockKindIf, end_label_name };
+        instr = (IrInstr) { IrInstrKindIf, { ._if = { arg0, arg1, rel_op, end_label_name } } };
+      } else {
+        new_block = (Block) { BlockKindWhile, end_label_name };
+        instr = (IrInstr) { IrInstrKindWhile, { ._while = { arg0, arg1, rel_op, end_label_name } } };
+      }
+
+      DA_APPEND(parser.blocks, new_block);
       DA_APPEND(last_proc->instrs, instr);
     } break;
 

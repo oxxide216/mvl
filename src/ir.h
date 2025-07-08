@@ -57,6 +57,7 @@ typedef enum {
   IrInstrKindAssign = 0,
   IrInstrKindRetVal,
   IrInstrKindIf,
+  IrInstrKindWhile,
   IrInstrKindLabel,
 } IrInstrKind;
 
@@ -77,6 +78,13 @@ typedef struct {
 } IrInstrIf;
 
 typedef struct {
+  IrArg arg0;
+  IrArg arg1;
+  RelOp rel_op;
+  Str   label_name;
+} IrInstrWhile;
+
+typedef struct {
   Str name;
 } IrInstrLabel;
 
@@ -84,6 +92,7 @@ typedef union {
   IrInstrAssign assign;
   IrInstrRetVal ret_val;
   IrInstrIf     _if;
+  IrInstrWhile  _while;
   IrInstrLabel  label;
 } IrInstrAs;
 

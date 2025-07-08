@@ -1,0 +1,7 @@
+proc main():
+  i = 0
+  while i < 10:
+    str = s64_to_str(i)
+    println(str)
+  end
+end
