@@ -1,0 +1,11 @@
+proc main(argc: s64) -> s64:
+  if argc == 1:
+    retval 66
+  elif argc == 2:
+    retval 88
+  else:
+    retval argc
+  end
+
+  retval 0
+end

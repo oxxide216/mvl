@@ -2,14 +2,7 @@
 #include "shl_log.h"
 
 typedef struct {
-  Str end_label;
-} Block;
-
-typedef Da(Block) Blocks;
-
-typedef struct {
   Program program;
-  Blocks  blocks;
 } Compiler;
 
 static ValueKind type_kinds_value_kinds_table[TypeKindsCount] = {

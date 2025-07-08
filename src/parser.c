@@ -9,11 +9,23 @@
 #include "ir.h"
 #include "shl_arena.h"
 
+typedef enum {
+  BlockKindProc = 0,
+  BlockKindIf,
+} BlockKind;
+
 typedef struct {
-  Tokens  tokens;
-  u32     index;
-  Da(Str) labels;
-  u32     max_labels_count;
+  BlockKind kind;
+  Str       end_label_name;
+} Block;
+
+typedef Da(Block) Blocks;
+
+typedef struct {
+  Tokens tokens;
+  u32    index;
+  Blocks blocks;
+  u32    max_labels_count;
 } Parser;
 
 static Str token_id_names[] = {
@@ -24,6 +36,7 @@ static Str token_id_names[] = {
   STR_LIT("character literal"),
   STR_LIT("`proc`"),
   STR_LIT("`if`"),
+  STR_LIT("`elif`"),
   STR_LIT("`else`"),
   STR_LIT("`while`"),
   STR_LIT("`end`"),
@@ -302,7 +315,7 @@ static IrProc parser_parse_proc_def(Parser *parser) {
 
   parser_expect_token(parser, MASK(TT_OPAREN));
 
-  token = parser_expect_token(parser, MASK(TT_IDENT) | MASK(TT_CPAREN));
+  token = parser_peek_token(parser, 0);
   while (token && token->id != TT_CPAREN) {
     Token *param_name_token = parser_expect_token(parser, MASK(TT_IDENT));
     parser_expect_token(parser, MASK(TT_COLON));
@@ -378,7 +391,8 @@ IrProcs parse(Tokens tokens) {
       last_proc = ir.items + ir.len - 1;
       recursion_level = 0;
 
-      DA_APPEND(parser.labels, (Str) {0});
+      Block new_block = { BlockKindProc, {0} };
+      DA_APPEND(parser.blocks, new_block);
     } break;
 
     case TT_IF: {
@@ -391,16 +405,70 @@ IrProcs parse(Tokens tokens) {
       ++recursion_level;
 
       Str end_label_name = gen_label_name(parser.max_labels_count++);
-      DA_APPEND(parser.labels, end_label_name);
+      Block new_block = { BlockKindIf, end_label_name };
+      DA_APPEND(parser.blocks, new_block);
 
       IrInstr instr = { IrInstrKindIf, { ._if = { arg0, arg1, rel_op, end_label_name } } };
       DA_APPEND(last_proc->instrs, instr);
     } break;
 
+    case TT_ELIF: {
+      IrArg arg0 = parser_parse_arg(&parser);
+      RelOp rel_op = parser_parse_rel_op(&parser);
+      IrArg arg1 = parser_parse_arg(&parser);
+
+      parser_expect_token(&parser, MASK(TT_COLON));
+
+      if (parser.blocks.len > 0) {
+        Block *last_block = parser.blocks.items + --parser.blocks.len;
+
+        if (last_block->kind != BlockKindIf) {
+          ERROR("`else` not inside of `if`\n");
+        }
+
+        Str label_name = last_block->end_label_name;
+        IrInstr instr = { IrInstrKindLabel, { .label = { label_name } } };
+        DA_APPEND(last_proc->instrs, instr);
+      } else {
+        ERROR("`elif` without `if`\n");
+        exit(1);
+      }
+
+      Str end_label_name = gen_label_name(parser.max_labels_count++);
+      Block new_block = { BlockKindIf, end_label_name };
+      DA_APPEND(parser.blocks, new_block);
+
+      IrInstr instr = { IrInstrKindIf, { ._if = { arg0, arg1, rel_op, end_label_name } } };
+      DA_APPEND(last_proc->instrs, instr);
+    } break;
+
+    case TT_ELSE: {
+      parser_expect_token(&parser, MASK(TT_COLON));
+
+      if (parser.blocks.len > 0) {
+        Block *last_block = parser.blocks.items + --parser.blocks.len;
+
+        if (last_block->kind != BlockKindIf) {
+          ERROR("`else` not inside of `if`\n");
+        }
+
+        Str label_name = last_block->end_label_name;
+        IrInstr instr = { IrInstrKindLabel, { .label = { label_name } } };
+        DA_APPEND(last_proc->instrs, instr);
+      } else {
+        ERROR("`else` without `if`\n");
+        exit(1);
+      }
+
+      Str end_label_name = gen_label_name(parser.max_labels_count++);
+      Block new_block = { BlockKindIf, end_label_name };
+      DA_APPEND(parser.blocks, new_block);
+    } break;
+
     case TT_END: {
-      if (parser.labels.len > 0) {
-        if (--parser.labels.len > 0) {
-          Str label_name = parser.labels.items[parser.labels.len];
+      if (parser.blocks.len > 0) {
+        if (parser.blocks.items[--parser.blocks.len].kind != BlockKindProc) {
+          Str label_name = parser.blocks.items[parser.blocks.len].end_label_name;
           IrInstr instr = { IrInstrKindLabel, { .label = { label_name } } };
           DA_APPEND(last_proc->instrs, instr);
         }
@@ -429,8 +497,8 @@ IrProcs parse(Tokens tokens) {
     token = parser_next_token(&parser);
   }
 
-  if (parser.labels.len > 0) {
-    ERROR("%u blocks were not closed\n", parser.labels.len);
+  if (parser.blocks.len > 0) {
+    ERROR("%u blocks were not closed\n", parser.blocks.len);
     exit(1);
   }
 

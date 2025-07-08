@@ -6,6 +6,7 @@ char_lit='
 
 proc=proc
 if=if
+elif=elif
 else=else
 while=while
 end=end
