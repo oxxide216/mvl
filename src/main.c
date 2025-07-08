@@ -12,6 +12,7 @@
 #include "../grammar.h"
 #include "io.h"
 #include "parser.h"
+#include "ir.h"
 #include "compiler.h"
 
 static char *str_to_cstr(Str str) {
@@ -100,8 +101,8 @@ int main(i32 argv, i8 **argc) {
     lex(text, &tokens, path_str);
   }
 
-  Program program = {0};
-  compile(tokens, &program);
+  IrProcs ir = parse(tokens);
+  Program program = compile_ir(ir);
 
   program_optimize(&program, Arch_X86_64);
   Str _asm = program_gen_code(&program, Arch_X86_64);

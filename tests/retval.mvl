@@ -1,0 +1,3 @@
+proc main() -> s64
+  retval 0
+end

@@ -2,8 +2,8 @@
 #define COMPILER_H
 
 #include "../libs/mvm/mvm.h"
-#include "lexer.h"
+#include "ir.h"
 
-void compile(Tokens tokens, Program *program);
+Program compile_ir(IrProcs ir);
 
 #endif // COMPILER_H
