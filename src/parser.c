@@ -17,16 +17,17 @@ typedef enum {
 
 typedef struct {
   BlockKind kind;
+  Str       begin_label_name;
   Str       end_label_name;
 } Block;
 
 typedef Da(Block) Blocks;
 
 typedef struct {
-  Tokens tokens;
-  u32    index;
-  Blocks blocks;
-  u32    max_labels_count;
+  Tokens *tokens;
+  u32     index;
+  Blocks  blocks;
+  u32     max_labels_count;
 } Parser;
 
 static Str token_id_names[] = {
@@ -47,11 +48,8 @@ static Str token_id_names[] = {
   STR_LIT("`retval`"),
   STR_LIT("`include`"),
   STR_LIT("`static`"),
-  STR_LIT("`asm`"),
   STR_LIT("`naked`"),
   STR_LIT("`cast`"),
-  STR_LIT("`macro`"),
-  STR_LIT("`group`"),
   STR_LIT("`record`"),
   STR_LIT("identifier"),
   STR_LIT("number"),
@@ -71,19 +69,13 @@ static Str token_id_names[] = {
   STR_LIT("`->`"),
   STR_LIT("'&'"),
   STR_LIT("`*`"),
-  STR_LIT("`!`"),
   STR_LIT("`$`"),
 };
 
-static u64 expected_begin_token_ids = MASK(TT_PROC) | MASK(TT_IF) |
-                                      MASK(TT_ELSE) | MASK(TT_WHILE) |
-                                      MASK(TT_END) | MASK(TT_BREAK) |
-                                      MASK(TT_CONTINUE) | MASK(TT_RET) |
-                                      MASK(TT_RETVAL) | MASK(TT_IDENT) |
-                                      MASK(TT_INCLUDE) | MASK(TT_STATIC) |
-                                      MASK(TT_ASM) | MASK(TT_DEREF) |
-                                      MASK(TT_MACRO) | MASK(TT_MACRO_CALL) |
-                                      MASK(TT_GROUP) | MASK(TT_RECORD);
+static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs);
+static bool parser_parse_global_instr(Parser *parser, Ir *ir,
+                                      Token *begin_token,
+                                      bool is_in_proc);
 
 static void print_id_mask(u64 id_mask, Str lexeme, FILE *stream) {
   u32 len = ARRAY_LEN(token_id_names);
@@ -119,7 +111,8 @@ static void print_id_mask(u64 id_mask, Str lexeme, FILE *stream) {
 
 void expect_token(Token *token, u64 id_mask) {
   if (!token) {
-    ERROR("Expected ");
+    ERROR(STR_FMT": Expected ",
+          STR_ARG(token->file_path));
     print_id_mask(id_mask, (Str) {0}, stderr);
     fputs(", but got EOF\n", stderr);
     exit(1);
@@ -140,10 +133,10 @@ void expect_token(Token *token, u64 id_mask) {
 }
 
 static Token *parser_peek_token(Parser *parser, u32 offset) {
-  if (parser->index + offset >= parser->tokens.len)
+  if (parser->index + offset >= parser->tokens->len)
     return NULL;
 
-  return parser->tokens.items + parser->index + offset;
+  return parser->tokens->items + parser->index + offset;
 }
 
 static Token *parser_next_token(Parser *parser) {
@@ -156,18 +149,6 @@ static Token *parser_expect_token(Parser *parser, u64 id_mask) {
   Token *token = parser_next_token(parser);
   expect_token(token, id_mask);
   return token;
-}
-
-static ArgKind token_id_to_arg_kind(u64 id) {
-  switch (id) {
-  case TT_NUMBER:       return ArgKindValue;
-  case TT_IDENT:        return ArgKindVar;
-
-  default: {
-    ERROR("Wrong token id\n");
-    exit(1);
-  }
-  }
 }
 
 static TypeKind str_to_type_kind(Str str) {
@@ -324,14 +305,11 @@ static IrProc parser_parse_proc_def(Parser *parser) {
     IrProcParam param = { param_name_token->lexeme, param_type };
     DA_APPEND(proc.params, param);
 
-    token = parser_expect_token(parser, MASK(TT_COMMA) |
-                                        MASK(TT_CPAREN));
-
-    if (token->id == TT_COMMA) {
-      token = parser_peek_token(parser, 0);
-      if (token->id == TT_CPAREN)
-        break;
-    }
+    token = parser_peek_token(parser, 0);
+    if (token->id == TT_CPAREN)
+      break;
+    else
+      parser_expect_token(parser, MASK(TT_COMMA) | MASK(TT_CPAREN));
   }
 
   parser_expect_token(parser, MASK(TT_CPAREN));
@@ -340,6 +318,9 @@ static IrProc parser_parse_proc_def(Parser *parser) {
   if (token->id == TT_RIGHT_ARROW) {
     parser_next_token(parser);
     proc.ret_val_type = parser_parse_type(parser);
+  } else {
+    proc.ret_val_type = aalloc(sizeof(Type));
+    *proc.ret_val_type = (Type) { TypeKindUnit, NULL };
   }
 
   parser_expect_token(parser, MASK(TT_COLON));
@@ -347,7 +328,28 @@ static IrProc parser_parse_proc_def(Parser *parser) {
   return proc;
 }
 
-RelOp parser_parse_rel_op(Parser *parser) {
+static IrInstr parser_parse_proc_call(Parser *parser, Str name, Str dest) {
+  IrArgs args = {0};
+
+  Token *token = parser_peek_token(parser, 0);
+  while (token && token->id != TT_CPAREN) {
+    IrArg arg = parser_parse_arg(parser);
+    DA_APPEND(args, arg);
+
+    token = parser_peek_token(parser, 0);
+
+    if (token->id == TT_CPAREN)
+      break;
+    else
+      parser_expect_token(parser, MASK(TT_COMMA) | MASK(TT_CPAREN));
+  }
+
+  parser_expect_token(parser, MASK(TT_CPAREN));
+
+  return (IrInstr) { IrInstrKindCall, { .call = { name, dest, args } } };
+}
+
+static RelOp parser_parse_rel_op(Parser *parser) {
   Token *token = parser_expect_token(parser, MASK(TT_EQ) | MASK(TT_NE) |
                                              MASK(TT_GE) | MASK(TT_LE) |
                                              MASK(TT_GT) | MASK(TT_LS));
@@ -363,155 +365,274 @@ RelOp parser_parse_rel_op(Parser *parser) {
   }
 }
 
-Str gen_label_name(u32 index) {
+static Str gen_label_name(u32 index) {
   StringBuilder sb = {0};
   sb_push(&sb, "label");
   sb_push_u32(&sb, index);
   return sb_to_str(sb);
 }
 
-IrProcs parse(Tokens tokens) {
-  Parser parser = {0};
-  parser.tokens = tokens;
-  IrProcs ir = {0};
-  IrProc *last_proc = NULL;
+static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
   u32 recursion_level = 0;
 
-  Token *token = parser_expect_token(&parser, expected_begin_token_ids);
+  Token *token = parser_next_token(parser);
   while (token) {
-    if (!last_proc && token->id != TT_PROC) {
-      ERROR("Instruction can be only inside of a procedure\n");
-      exit(1);
+    bool instr_is_global = parser_parse_global_instr(parser, NULL, token, true);
+    if (instr_is_global) {
+      token = parser_next_token(parser);
+      continue;
     }
 
     switch (token->id) {
-    case TT_PROC: {
-      IrProc proc = parser_parse_proc_def(&parser);
-      DA_APPEND(ir, proc);
+    case TT_IDENT: {
+      Token *next = parser_expect_token(parser, MASK(TT_ASSIGN) | MASK(TT_OPAREN));
 
-      last_proc = ir.items + ir.len - 1;
-      recursion_level = 0;
-
-      Block new_block = { BlockKindProc, {0} };
-      DA_APPEND(parser.blocks, new_block);
+      if (next->id == TT_ASSIGN) {
+        next = parser_peek_token(parser, 0);
+        if (next->id == TT_IDENT) {
+          next = parser_peek_token(parser, 1);
+          if (next->id == TT_OPAREN) {
+            Token *callee_name_token = parser_next_token(parser);
+            parser_next_token(parser);
+            parser_parse_proc_call(parser, callee_name_token->lexeme, token->lexeme);
+          } else {
+            IrArg arg = parser_parse_arg(parser);
+            IrInstr instr = { IrInstrKindAssign, { .assign = { token->lexeme, arg } } };
+            DA_APPEND(*instrs, instr);
+          }
+        } else {
+          IrArg arg = parser_parse_arg(parser);
+          IrInstr instr = { IrInstrKindAssign, { .assign = { token->lexeme, arg } } };
+          DA_APPEND(*instrs, instr);
+        }
+      } else if (next->id == TT_OPAREN) {
+        IrInstr instr = parser_parse_proc_call(parser, token->lexeme, (Str) {0});
+        DA_APPEND(*instrs, instr);
+      }
     } break;
 
     case TT_IF:
     case TT_WHILE: {
-      IrArg arg0 = parser_parse_arg(&parser);
-      RelOp rel_op = parser_parse_rel_op(&parser);
-      IrArg arg1 = parser_parse_arg(&parser);
+      IrArg arg0 = parser_parse_arg(parser);
+      RelOp rel_op = parser_parse_rel_op(parser);
+      IrArg arg1 = parser_parse_arg(parser);
 
-      parser_expect_token(&parser, MASK(TT_COLON));
+      parser_expect_token(parser, MASK(TT_COLON));
 
       ++recursion_level;
 
-      Str end_label_name = gen_label_name(parser.max_labels_count++);
+      Str end_label_name = gen_label_name(parser->max_labels_count++);
       Block new_block;
       IrInstr instr;
 
-
       if (token->id == TT_IF) {
-        new_block = (Block) { BlockKindIf, end_label_name };
-        instr = (IrInstr) { IrInstrKindIf, { ._if = { arg0, arg1, rel_op, end_label_name } } };
+        new_block = (Block) { BlockKindIf, {0}, end_label_name };
+        instr = (IrInstr) {
+          IrInstrKindIf,
+          {
+            ._if = {
+              arg0,
+              arg1,
+              rel_op,
+              end_label_name,
+            },
+          },
+        };
       } else {
-        new_block = (Block) { BlockKindWhile, end_label_name };
-        instr = (IrInstr) { IrInstrKindWhile, { ._while = { arg0, arg1, rel_op, end_label_name } } };
+        Str begin_label_name = gen_label_name(parser->max_labels_count++);
+        new_block = (Block) { BlockKindWhile, begin_label_name, end_label_name };
+        instr = (IrInstr) {
+          IrInstrKindWhile, {
+            ._while = {
+              arg0,
+              arg1,
+              rel_op,
+              begin_label_name,
+              end_label_name,
+            },
+          },
+        };
       }
 
-      DA_APPEND(parser.blocks, new_block);
-      DA_APPEND(last_proc->instrs, instr);
+      DA_APPEND(parser->blocks, new_block);
+      DA_APPEND(*instrs, instr);
     } break;
 
     case TT_ELIF: {
-      IrArg arg0 = parser_parse_arg(&parser);
-      RelOp rel_op = parser_parse_rel_op(&parser);
-      IrArg arg1 = parser_parse_arg(&parser);
+      IrArg arg0 = parser_parse_arg(parser);
+      RelOp rel_op = parser_parse_rel_op(parser);
+      IrArg arg1 = parser_parse_arg(parser);
 
-      parser_expect_token(&parser, MASK(TT_COLON));
+      parser_expect_token(parser, MASK(TT_COLON));
 
-      if (parser.blocks.len > 0) {
-        Block *last_block = parser.blocks.items + --parser.blocks.len;
-
-        if (last_block->kind != BlockKindIf) {
-          ERROR("`else` not inside of `if`\n");
-        }
-
-        Str label_name = last_block->end_label_name;
-        IrInstr instr = { IrInstrKindLabel, { .label = { label_name } } };
-        DA_APPEND(last_proc->instrs, instr);
-      } else {
+      if (parser->blocks.len == 0) {
         ERROR("`elif` without `if`\n");
         exit(1);
       }
 
-      Str end_label_name = gen_label_name(parser.max_labels_count++);
-      Block new_block = { BlockKindIf, end_label_name };
-      DA_APPEND(parser.blocks, new_block);
+      Block *last_block = parser->blocks.items + --parser->blocks.len;
 
-      IrInstr instr = { IrInstrKindIf, { ._if = { arg0, arg1, rel_op, end_label_name } } };
-      DA_APPEND(last_proc->instrs, instr);
+      if (last_block->kind != BlockKindIf) {
+        ERROR("`else` not inside of `if`\n");
+      }
+
+      Str label_name = last_block->end_label_name;
+      IrInstr label_instr = { IrInstrKindLabel, { .label = { label_name } } };
+      DA_APPEND(*instrs, label_instr);
+
+      Str end_label_name = gen_label_name(parser->max_labels_count++);
+      Block new_block = { BlockKindIf, {0}, end_label_name };
+      DA_APPEND(parser->blocks, new_block);
+
+      IrInstr if_instr = { IrInstrKindIf, { ._if = { arg0, arg1, rel_op, end_label_name } } };
+      DA_APPEND(*instrs, if_instr);
     } break;
 
     case TT_ELSE: {
-      parser_expect_token(&parser, MASK(TT_COLON));
+      parser_expect_token(parser, MASK(TT_COLON));
 
-      if (parser.blocks.len > 0) {
-        Block *last_block = parser.blocks.items + --parser.blocks.len;
-
-        if (last_block->kind != BlockKindIf) {
-          ERROR("`else` not inside of `if`\n");
-        }
-
-        Str label_name = last_block->end_label_name;
-        IrInstr instr = { IrInstrKindLabel, { .label = { label_name } } };
-        DA_APPEND(last_proc->instrs, instr);
-      } else {
+      if (parser->blocks.len == 0) {
         ERROR("`else` without `if`\n");
         exit(1);
       }
 
-      Str end_label_name = gen_label_name(parser.max_labels_count++);
-      Block new_block = { BlockKindIf, end_label_name };
-      DA_APPEND(parser.blocks, new_block);
+      Block *last_block = parser->blocks.items + --parser->blocks.len;
+      if (last_block->kind != BlockKindIf) {
+        ERROR("`else` not inside of `if`\n");
+        exit(1);
+      }
+
+      Str label_name = last_block->end_label_name;
+      IrInstr instr = { IrInstrKindLabel, { .label = { label_name } } };
+      DA_APPEND(*instrs, instr);
+
+      Str end_label_name = gen_label_name(parser->max_labels_count++);
+      Block new_block = { BlockKindIf, {0}, end_label_name };
+      DA_APPEND(parser->blocks, new_block);
     } break;
 
     case TT_END: {
-      if (parser.blocks.len > 0) {
-        if (parser.blocks.items[--parser.blocks.len].kind != BlockKindProc) {
-          Str label_name = parser.blocks.items[parser.blocks.len].end_label_name;
-          IrInstr instr = { IrInstrKindLabel, { .label = { label_name } } };
-          DA_APPEND(last_proc->instrs, instr);
+      if (parser->blocks.len == 0)
+        return;
+
+      Block *last_block = parser->blocks.items + --parser->blocks.len;
+      if (last_block->kind != BlockKindProc) {
+        if (last_block->kind == BlockKindWhile) {
+          Str label_name = last_block->begin_label_name;
+          IrInstr instr = { IrInstrKindJump, { .label = { label_name } } };
+          DA_APPEND(*instrs, instr);
+        }
+
+        Str label_name = last_block->end_label_name;
+        IrInstr instr = { IrInstrKindLabel, { .label = { label_name } } };
+        DA_APPEND(*instrs, instr);
+      }
+    } break;
+
+    case TT_BREAK:
+    case TT_CONTINUE: {
+      Block *loop_block = NULL;
+      for (u32 i = parser->blocks.len; i > 0; ++i) {
+        if (parser->blocks.items[i - 1].kind == BlockKindWhile) {
+          loop_block = parser->blocks.items + i - 1;
+          break;
         }
       }
 
-      if (recursion_level == 0)
-        last_proc = NULL;
-      else
-        --recursion_level;
+      if (!loop_block) {
+        if (token->id == TT_BREAK)
+          ERROR("`break` not inside of a loop\n");
+        else
+          ERROR("`continue` not inside of a loop\n");
+        exit(1);
+      }
+
+      IrInstr instr;
+      if (token->id == TT_BREAK) {
+        Str label_name = loop_block->end_label_name;
+        instr = (IrInstr) { IrInstrKindJump, { .jump = { label_name } } };
+      } else {
+        Str label_name = loop_block->begin_label_name;
+        instr = (IrInstr) { IrInstrKindJump, { .jump = { label_name } } };
+      }
+      DA_APPEND(*instrs, instr);
+    } break;
+
+    case TT_RET: {
+      IrInstr instr = { IrInstrKindRet, {} };
+      DA_APPEND(*instrs, instr);
     } break;
 
     case TT_RETVAL: {
-      IrArg arg = parser_parse_arg(&parser);
-
+      IrArg arg = parser_parse_arg(parser);
       IrInstr instr = { IrInstrKindRetVal, { .ret_val = { arg } } };
-      DA_APPEND(last_proc->instrs, instr);
+      DA_APPEND(*instrs, instr);
     } break;
 
     default: {
-      ERROR("Wrong token id at %u:%u\n",
-            token->row + 1, token->col + 1);
+      ERROR(STR_FMT":%u:%u: Wrong token id: %lu\n",
+            STR_ARG(token->file_path), token->row + 1,
+            token->col + 1, token->id);
       exit(1);
     }
     }
 
-    token = parser_next_token(&parser);
+    token = parser_next_token(parser);
   }
 
-  if (parser.blocks.len > 0) {
-    ERROR("%u blocks were not closed\n", parser.blocks.len);
+  if (parser->blocks.len > 0) {
+    ERROR("%u blocks were not closed\n", parser->blocks.len);
     exit(1);
+  }
+}
+
+static bool parser_parse_global_instr(Parser *parser, Ir *ir,
+                                      Token *begin_token,
+                                      bool is_in_proc) {
+  switch (begin_token->id) {
+    case TT_PROC: {
+      if (is_in_proc) {
+        ERROR(STR_FMT":%u:%u: Nested procedures are not supported\n",
+          STR_ARG(begin_token->file_path), begin_token->row + 1, begin_token->col + 1);
+        exit(1);
+      }
+
+      IrProc new_proc = parser_parse_proc_def(parser);
+      parser_parse_proc_instrs(parser, &new_proc.instrs);
+      DA_APPEND(ir->procs, new_proc);
+    } break;
+
+    case TT_INCLUDE: {
+      parser_expect_token(parser, MASK(TT_STR_LIT));
+    } break;
+
+    default: return false;
+  }
+
+  return true;
+}
+
+static Ir parser_parse(Parser *parser) {
+  Ir ir = {0};
+
+  Token *token = parser_next_token(parser);
+  while (token) {
+    bool instr_is_global = parser_parse_global_instr(parser, &ir, token, false);
+    if (!instr_is_global) {
+      ERROR(STR_FMT":%u:%u: Instrucion cannot be defined outside of a procedure\n",
+        STR_ARG(token->file_path), token->row + 1, token->col + 1);
+      exit(1);
+    }
+
+    token = parser_next_token(parser);
   }
 
   return ir;
+}
+
+Ir parse(Tokens *tokens) {
+  Parser parser = {0};
+  parser.tokens = tokens;
+
+  return parser_parse(&parser);
 }

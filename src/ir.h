@@ -53,12 +53,18 @@ typedef struct {
   IrArgAs    as;
 } IrArg;
 
+typedef Da(IrArg) IrArgs;
+
 typedef enum {
   IrInstrKindAssign = 0,
-  IrInstrKindRetVal,
   IrInstrKindIf,
   IrInstrKindWhile,
+  IrInstrKindJump,
   IrInstrKindLabel,
+  IrInstrKindRet,
+  IrInstrKindRetVal,
+  IrInstrKindCall,
+  IrInstrKindMacroCall,
 } IrInstrKind;
 
 typedef struct {
@@ -81,19 +87,32 @@ typedef struct {
   IrArg arg0;
   IrArg arg1;
   RelOp rel_op;
-  Str   label_name;
+  Str   begin_label_name;
+  Str   end_label_name;
 } IrInstrWhile;
+
+typedef struct {
+  Str label_name;
+} IrInstrJump;
 
 typedef struct {
   Str name;
 } IrInstrLabel;
 
+typedef struct {
+  Str    callee_name;
+  Str    dest;
+  IrArgs args;
+} IrInstrCall;
+
 typedef union {
-  IrInstrAssign assign;
-  IrInstrRetVal ret_val;
-  IrInstrIf     _if;
-  IrInstrWhile  _while;
-  IrInstrLabel  label;
+  IrInstrAssign     assign;
+  IrInstrRetVal     ret_val;
+  IrInstrIf         _if;
+  IrInstrWhile      _while;
+  IrInstrJump       jump;
+  IrInstrLabel      label;
+  IrInstrCall       call;
 } IrInstrAs;
 
 typedef struct {
@@ -119,5 +138,17 @@ typedef struct {
 } IrProc;
 
 typedef Da(IrProc) IrProcs;
+
+typedef struct {
+  Str   name;
+  Type *type;
+} StaticVariable;
+
+typedef Da(StaticVariable) StaticVariables;
+
+typedef struct {
+  IrProcs         procs;
+  StaticVariables static_vars;
+} Ir;
 
 #endif // IR_H

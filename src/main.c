@@ -101,8 +101,8 @@ int main(i32 argv, i8 **argc) {
     lex(text, &tokens, path_str);
   }
 
-  IrProcs ir = parse(tokens);
-  Program program = compile_ir(ir);
+  Ir ir = parse(&tokens);
+  Program program = compile_ir(&ir);
 
   program_optimize(&program, Arch_X86_64);
   Str _asm = program_gen_code(&program, Arch_X86_64);

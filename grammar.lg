@@ -16,11 +16,8 @@ ret=ret
 retval=retval
 include=include
 static=static
-asm=asm
 naked=naked
 cast=cast
-macro=macro
-group=group
 record=record
 
 ident=(a-z|A-Z|_)(a-z|A-Z|0-9|_)*
@@ -38,9 +35,8 @@ ge=>=
 le=<=
 gt=>
 ls=<
-put==
+assign==
 right_arrow=\->
 ref=&
 deref=\*
-macro_call=!
 record_create=$
