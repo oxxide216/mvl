@@ -149,22 +149,22 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
             exit(1);
           }
 
-          TargetLocKind target_loc_kind;
-          if (i < code.len) {
-            if (code.ptr[i] == 'a') {
-              target_loc_kind = TargetLocKindAny;
-            } else if (code.ptr[i] == 'i') {
-              target_loc_kind = TargetLocKindImm;
-            } else if (code.ptr[i] == 'r') {
-              target_loc_kind = TargetLocKindReg;
-            } else if (code.ptr[i] == 'm') {
-              target_loc_kind = TargetLocKindMem;
-            } else {
-              ERROR("Invalid variable location specifier: %c\n", code.ptr[i]);
-              exit(1);
-            }
-          } else {
+          if (i >= code.len) {
             ERROR("Expected variable location specifier, but got end of string\n");
+            exit(1);
+          }
+
+          TargetLocKind target_loc_kind;
+          if (code.ptr[i] == 'a') {
+            target_loc_kind = TargetLocKindAny;
+          } else if (code.ptr[i] == 'i') {
+            target_loc_kind = TargetLocKindImm;
+          } else if (code.ptr[i] == 'r') {
+            target_loc_kind = TargetLocKindReg;
+          } else if (code.ptr[i] == 'm') {
+            target_loc_kind = TargetLocKindMem;
+          } else {
+            ERROR("Invalid variable location specifier: %c\n", code.ptr[i]);
             exit(1);
           }
 
