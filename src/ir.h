@@ -64,7 +64,7 @@ typedef enum {
   IrInstrKindRet,
   IrInstrKindRetVal,
   IrInstrKindCall,
-  IrInstrKindMacroCall,
+  IrInstrKindAsm,
 } IrInstrKind;
 
 typedef struct {
@@ -105,6 +105,15 @@ typedef struct {
   IrArgs args;
 } IrInstrCall;
 
+typedef Da(Str) VarNames;
+
+typedef struct {
+  Str           dest;
+  Type          *dest_type;
+  Str            code;
+  VarNames       var_names;
+} IrInstrAsm;
+
 typedef union {
   IrInstrAssign     assign;
   IrInstrRetVal     ret_val;
@@ -113,6 +122,7 @@ typedef union {
   IrInstrJump       jump;
   IrInstrLabel      label;
   IrInstrCall       call;
+  IrInstrAsm        _asm;
 } IrInstrAs;
 
 typedef struct {

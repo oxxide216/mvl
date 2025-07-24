@@ -16,6 +16,7 @@ ret=ret
 retval=retval
 include=include
 static=static
+asm=asm
 naked=naked
 cast=cast
 record=record

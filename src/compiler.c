@@ -120,8 +120,69 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
         proc_call_assign(proc, dest, callee_name, args);
     } break;
 
+    case IrInstrKindAsm: {
+      Str dest = ir_instr->as._asm.dest;
+      Type *dest_type = ir_instr->as._asm.dest_type;
+      Str code = ir_instr->as._asm.code;
+      VarNames *var_names = &ir_instr->as._asm.var_names;
+
+      ValueKind dest_kind = type_kinds_value_kinds_table[dest_type->kind];
+      InlineAsmSegments segments = {0};
+
+      StringBuilder sb = {0};
+      u32 var_index = 0;
+
+      for (u32 i = 0; i < code.len; ++i) {
+        if (code.ptr[i] == '@') {
+          if (sb.len > 0) {
+            segments_push_text(&segments, sb_to_str(sb));
+            sb = (StringBuilder) {0};
+          }
+
+          if (++i >= code.len) {
+            ERROR("Expected variable location specifier, but got end of string\n");
+            exit(1);
+          }
+
+          if (var_index >= var_names->len) {
+            ERROR("Not enough variable arguments in inline assembly\n");
+            exit(1);
+          }
+
+          TargetLocKind target_loc_kind;
+          if (i < code.len) {
+            if (code.ptr[i] == 'a') {
+              target_loc_kind = TargetLocKindAny;
+            } else if (code.ptr[i] == 'i') {
+              target_loc_kind = TargetLocKindImm;
+            } else if (code.ptr[i] == 'r') {
+              target_loc_kind = TargetLocKindReg;
+            } else if (code.ptr[i] == 'm') {
+              target_loc_kind = TargetLocKindMem;
+            } else {
+              ERROR("Invalid variable location specifier: %c\n", code.ptr[i]);
+              exit(1);
+            }
+          } else {
+            ERROR("Expected variable location specifier, but got end of string\n");
+            exit(1);
+          }
+
+          segments_push_var(&segments, var_names->items[var_index++],
+                            target_loc_kind, false);
+        } else {
+          sb_push_char(&sb, code.ptr[i]);
+        }
+      }
+
+      if (sb.len > 0)
+        segments_push_text(&segments, sb_to_str(sb));
+
+      proc_inline_asm(proc, dest, dest_kind, segments);
+    } break;
+
     default: {
-      ERROR("Wrong IR instr kind\n");
+      ERROR("Unexpected IR instr kind: %u\n", ir_instr->kind);
       exit(1);
     }
     }

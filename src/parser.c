@@ -48,6 +48,7 @@ static Str token_id_names[] = {
   STR_LIT("`retval`"),
   STR_LIT("`include`"),
   STR_LIT("`static`"),
+  STR_LIT("`asm`"),
   STR_LIT("`naked`"),
   STR_LIT("`cast`"),
   STR_LIT("`record`"),
@@ -71,6 +72,8 @@ static Str token_id_names[] = {
   STR_LIT("`*`"),
   STR_LIT("`$`"),
 };
+
+static Type unit_type = { TypeKindUnit, NULL };
 
 static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs);
 static bool parser_parse_global_instr(Parser *parser, Ir *ir,
@@ -125,9 +128,9 @@ void expect_token(Token *token, u64 id_mask) {
          STR_ARG(token->file_path),
          token->row + 1, token->col + 1);
   print_id_mask(id_mask, (Str) {0}, stderr);
-  fputs(", but got ", stderr);
-  print_id_mask(MASK(token->id), token->lexeme, stderr);
-  fputc('\n', stderr);
+  fputs(", but got `", stderr);
+  str_fprint(stderr, token->lexeme);
+  fputs("`\n", stderr);
 
   exit(1);
 }
@@ -306,9 +309,7 @@ static IrProc parser_parse_proc_def(Parser *parser) {
     DA_APPEND(proc.params, param);
 
     token = parser_peek_token(parser, 0);
-    if (token->id == TT_CPAREN)
-      break;
-    else
+    if (token->id != TT_CPAREN)
       parser_expect_token(parser, MASK(TT_COMMA) | MASK(TT_CPAREN));
   }
 
@@ -319,8 +320,7 @@ static IrProc parser_parse_proc_def(Parser *parser) {
     parser_next_token(parser);
     proc.ret_val_type = parser_parse_type(parser);
   } else {
-    proc.ret_val_type = aalloc(sizeof(Type));
-    *proc.ret_val_type = (Type) { TypeKindUnit, NULL };
+    proc.ret_val_type = &unit_type;
   }
 
   parser_expect_token(parser, MASK(TT_COLON));
@@ -337,10 +337,7 @@ static IrInstr parser_parse_proc_call(Parser *parser, Str name, Str dest) {
     DA_APPEND(args, arg);
 
     token = parser_peek_token(parser, 0);
-
-    if (token->id == TT_CPAREN)
-      break;
-    else
+    if (token->id != TT_CPAREN)
       parser_expect_token(parser, MASK(TT_COMMA) | MASK(TT_CPAREN));
   }
 
@@ -372,6 +369,30 @@ static Str gen_label_name(u32 index) {
   return sb_to_str(sb);
 }
 
+static IrInstr parser_parse_asm(Parser *parser, Str dest, Type *dest_type) {
+  Token *code_token = parser_expect_token(parser, MASK(TT_STR_LIT));
+  VarNames var_names = {0};
+
+  parser_expect_token(parser, MASK(TT_OBRACKET));
+
+  Token *token = parser_peek_token(parser, 0);
+  while (token && token->id != TT_CBRACKET) {
+    Token *var_name_token = parser_expect_token(parser, MASK(TT_IDENT));
+    DA_APPEND(var_names, var_name_token->lexeme);
+
+    token = parser_peek_token(parser, 0);
+    if (token->id != TT_CBRACKET)
+      token = parser_expect_token(parser, MASK(TT_COMMA) | MASK(TT_CBRACKET));
+  }
+
+  parser_expect_token(parser, MASK(TT_CBRACKET));
+
+  return (IrInstr) {
+    IrInstrKindAsm,
+    { ._asm = { dest, dest_type, code_token->lexeme, var_names } },
+  };
+}
+
 static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
   u32 recursion_level = 0;
 
@@ -400,6 +421,12 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
             IrInstr instr = { IrInstrKindAssign, { .assign = { token->lexeme, arg } } };
             DA_APPEND(*instrs, instr);
           }
+        } else if (next->id == TT_ASM) {
+          parser_next_token(parser);
+          Type *dest_type = parser_parse_type(parser);
+
+          IrInstr instr = parser_parse_asm(parser, token->lexeme, dest_type);
+          DA_APPEND(*instrs, instr);
         } else {
           IrArg arg = parser_parse_arg(parser);
           IrInstr instr = { IrInstrKindAssign, { .assign = { token->lexeme, arg } } };
@@ -569,8 +596,19 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
       DA_APPEND(*instrs, instr);
     } break;
 
+    case TT_INCLUDE: {} break;
+
+    case TT_STATIC: {} break;
+
+    case TT_ASM: {
+      IrInstr instr = parser_parse_asm(parser, (Str) {0}, &unit_type);
+      DA_APPEND(*instrs, instr);
+    } break;
+
+    case TT_RECORD: {} break;
+
     default: {
-      ERROR(STR_FMT":%u:%u: Wrong token id: %lu\n",
+      ERROR(STR_FMT":%u:%u: Unexpected token id: %lu\n",
             STR_ARG(token->file_path), token->row + 1,
             token->col + 1, token->id);
       exit(1);
