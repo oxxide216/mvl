@@ -114,10 +114,10 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
         DA_APPEND(args, arg);
       }
 
-      if (dest.len == 0)
-        proc_call(proc, callee_name, args);
-      else
+      if (dest.len > 0)
         proc_call_assign(proc, dest, callee_name, args);
+      else
+        proc_call(proc, callee_name, args);
     } break;
 
     case IrInstrKindAsm: {
