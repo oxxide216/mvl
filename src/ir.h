@@ -108,7 +108,7 @@ typedef struct {
 typedef Da(Str) VarNames;
 
 typedef struct {
-  Str           dest;
+  Str            dest;
   Type          *dest_type;
   Str            code;
   VarNames       var_names;
@@ -145,6 +145,7 @@ typedef struct {
   IrProcParams  params;
   Type         *ret_val_type;
   bool          is_naked;
+  bool          is_inlined;
 } IrProc;
 
 typedef Da(IrProc) IrProcs;

@@ -157,8 +157,6 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
           TargetLocKind target_loc_kind;
           if (code.ptr[i] == 'a') {
             target_loc_kind = TargetLocKindAny;
-          } else if (code.ptr[i] == 'i') {
-            target_loc_kind = TargetLocKindImm;
           } else if (code.ptr[i] == 'r') {
             target_loc_kind = TargetLocKindReg;
           } else if (code.ptr[i] == 'm') {
@@ -208,7 +206,8 @@ Program compile_ir(Ir *ir) {
     }
 
     Procedure *proc = program_push_proc(&compiler.program, ir_proc->name,
-                                        ret_val_kind, params, ir_proc->is_naked);
+                                        ret_val_kind, params, ir_proc->is_naked,
+                                        ir_proc->is_inlined);
 
     compile_ir_instrs(&compiler, proc, i);
   }

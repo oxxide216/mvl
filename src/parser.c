@@ -52,6 +52,7 @@ static Str token_id_names[] = {
   STR_LIT("`naked`"),
   STR_LIT("`cast`"),
   STR_LIT("`record`"),
+  STR_LIT("`inline`"),
   STR_LIT("identifier"),
   STR_LIT("number"),
   STR_LIT("`(`"),
@@ -289,10 +290,17 @@ static IrArg parser_parse_arg(Parser *parser) {
 static IrProc parser_parse_proc_def(Parser *parser) {
   IrProc proc = {0};
 
-  Token *token = parser_expect_token(parser, MASK(TT_IDENT) | MASK(TT_NAKED));
+  Token *token = parser_expect_token(parser, MASK(TT_IDENT) |
+                                             MASK(TT_NAKED) |
+                                             MASK(TT_INLINE));
 
   if (token->id == TT_NAKED) {
     proc.is_naked = true;
+    token = parser_expect_token(parser, MASK(TT_IDENT) | MASK(TT_INLINE));
+  }
+
+  if (token->id == TT_INLINE) {
+    proc.is_inlined = true;
     token = parser_expect_token(parser, MASK(TT_IDENT));
   }
 
@@ -415,7 +423,8 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
           if (next->id == TT_OPAREN) {
             Token *callee_name_token = parser_next_token(parser);
             parser_next_token(parser);
-            parser_parse_proc_call(parser, callee_name_token->lexeme, token->lexeme);
+            IrInstr instr = parser_parse_proc_call(parser, callee_name_token->lexeme, token->lexeme);
+            DA_APPEND(*instrs, instr);
           } else {
             IrArg arg = parser_parse_arg(parser);
             IrInstr instr = { IrInstrKindAssign, { .assign = { token->lexeme, arg } } };
