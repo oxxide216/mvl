@@ -154,9 +154,17 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
             exit(1);
           }
 
-          TargetLocKind target_loc_kind;
-          if (code.ptr[i] == 'a') {
+          TargetLocKind target_loc_kind = TargetLocKindAny;
+          bool is_dest_var = false;
+
+          if (code.ptr[i] == '@') {
+            is_dest_var = true;
+          } else if (code.ptr[i] == 'a') {
             target_loc_kind = TargetLocKindAny;
+          } else if (code.ptr[i] == 'i') {
+            target_loc_kind = TargetLocKindImm;
+          } else if (code.ptr[i] == 'n') {
+            target_loc_kind = TargetLocKindNotImm;
           } else if (code.ptr[i] == 'r') {
             target_loc_kind = TargetLocKindReg;
           } else if (code.ptr[i] == 'm') {
@@ -166,8 +174,11 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
             exit(1);
           }
 
-          segments_push_var(&segments, var_names->items[var_index++],
-                            target_loc_kind, false);
+          segments_push_var(&segments, var_names->items[var_index],
+                            target_loc_kind, is_dest_var);
+
+          if (!is_dest_var)
+            ++var_index;
         } else {
           sb_push_char(&sb, code.ptr[i]);
         }
