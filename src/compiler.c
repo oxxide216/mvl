@@ -202,6 +202,17 @@ Program compile_ir(Ir *ir) {
   Compiler compiler = {0};
   compiler.ir = ir;
 
+  for (u32 i = 0; i < ir->static_vars.len; ++i) {
+    StaticVariable *var = ir->static_vars.items + i;
+    program_push_static_var(&compiler.program, var->name, var->value);
+  }
+
+  for (u32 i = 0; i < ir->static_data.len; ++i) {
+    StaticBuffer *buffer = ir->static_data.items + i;
+    program_push_static_segment(&compiler.program, buffer->name,
+                                buffer->data, buffer->size);
+  }
+
   for (u32 i = 0; i < ir->procs.len; ++i) {
     IrProc *ir_proc = ir->procs.items + i;
 

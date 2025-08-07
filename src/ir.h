@@ -152,14 +152,23 @@ typedef Da(IrProc) IrProcs;
 
 typedef struct {
   Str   name;
-  Type *type;
+  Value value;
 } StaticVariable;
 
 typedef Da(StaticVariable) StaticVariables;
 
 typedef struct {
+  Str  name;
+  u8  *data;
+  u32  size;
+} StaticBuffer;
+
+typedef Da(StaticBuffer) StaticData;
+
+typedef struct {
   IrProcs         procs;
   StaticVariables static_vars;
+  StaticData      static_data;
 } Ir;
 
 #endif // IR_H

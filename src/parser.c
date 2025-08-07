@@ -24,10 +24,29 @@ typedef struct {
 typedef Da(Block) Blocks;
 
 typedef struct {
-  Tokens *tokens;
-  u32     index;
-  Blocks  blocks;
-  u32     max_labels_count;
+  Str    name;
+  Type  *type;
+} Var;
+
+typedef Da(Var) Vars;
+
+typedef Da(Value) Values;
+
+typedef struct {
+  Str  name;
+  u8  *data;
+  u32  size;
+} ParserStaticBuffer;
+
+typedef Da(ParserStaticBuffer) StaticBuffers;
+
+typedef struct {
+  Tokens        *tokens;
+  u32            index;
+  Blocks         blocks;
+  Values         static_var_values;
+  StaticBuffers  static_buffers;
+  u32            max_labels_count;
 } Parser;
 
 static Str token_id_names[] = {
@@ -275,16 +294,35 @@ static Type *parser_parse_type(Parser *parser) {
   return type;
 }
 
+static Str create_static_var_name(u32 id) {
+  StringBuilder sb = {0};
+  sb_push(&sb, "?s");
+  sb_push_u32(&sb, id);
+
+  return sb_to_str(sb);
+}
+
 static IrArg parser_parse_arg(Parser *parser) {
-  Token *token = parser_expect_token(parser, MASK(TT_NUMBER) | MASK(TT_IDENT));
+  Token *token = parser_expect_token(parser, MASK(TT_NUMBER) | MASK(TT_IDENT) | MASK(TT_STR_LIT));
+  IrArg arg;
 
-  IrArgKind arg_kind;
-  if (token->id == TT_NUMBER)
-    arg_kind = IrArgKindValue;
-  else if (token->id == TT_IDENT)
-    arg_kind = IrArgKindVar;
+  if (token->id == TT_NUMBER) {
+    arg = str_to_ir_arg(token->lexeme, IrArgKindValue);
+  } else if (token->id == TT_IDENT) {
+    arg = str_to_ir_arg(token->lexeme, IrArgKindVar);
+  } else if (token->id == TT_STR_LIT) {
+    Str buffer_name = create_static_var_name(parser->static_buffers.len);
+    ParserStaticBuffer buffer = {
+      buffer_name,
+      (u8 *) token->lexeme.ptr,
+      token->lexeme.len * sizeof(token->lexeme.ptr[0]),
+    };
+    DA_APPEND(parser->static_buffers, buffer);
 
-  return str_to_ir_arg(token->lexeme, arg_kind);
+    arg = str_to_ir_arg(buffer_name, IrArgKindVar);
+  }
+
+  return arg;
 }
 
 static IrProc parser_parse_proc_def(Parser *parser) {
@@ -681,5 +719,23 @@ Ir parse(Tokens *tokens) {
   Parser parser = {0};
   parser.tokens = tokens;
 
-  return parser_parse(&parser);
+  Ir ir = parser_parse(&parser);
+
+  for (u32 i = 0; i < parser.static_var_values.len; ++i) {
+    Str var_name = create_static_var_name(i);
+    StaticVariable var = { var_name, parser.static_var_values.items[i] };
+    DA_APPEND(ir.static_vars, var);
+  }
+
+  for (u32 i = 0; i < parser.static_buffers.len; ++i) {
+    Str var_name = create_static_var_name(i + parser.static_var_values.len);
+    StaticBuffer buffer = {
+      var_name,
+      parser.static_buffers.items[i].data,
+      parser.static_buffers.items[i].size,
+    };
+    DA_APPEND(ir.static_data, buffer);
+  }
+
+  return ir;
 }
