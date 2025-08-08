@@ -56,7 +56,8 @@ typedef struct {
 typedef Da(IrArg) IrArgs;
 
 typedef enum {
-  IrInstrKindAssign = 0,
+  IrInstrKindCreate = 0,
+  IrInstrKindAssign,
   IrInstrKindIf,
   IrInstrKindWhile,
   IrInstrKindJump,
@@ -68,7 +69,12 @@ typedef enum {
 } IrInstrKind;
 
 typedef struct {
-  Str dest;
+  Str   dest;
+  Type *dest_type;
+} IrInstrCreate;
+
+typedef struct {
+  Str   dest;
   IrArg arg;
 } IrInstrAssign;
 
@@ -115,14 +121,15 @@ typedef struct {
 } IrInstrAsm;
 
 typedef union {
-  IrInstrAssign     assign;
-  IrInstrRetVal     ret_val;
-  IrInstrIf         _if;
-  IrInstrWhile      _while;
-  IrInstrJump       jump;
-  IrInstrLabel      label;
-  IrInstrCall       call;
-  IrInstrAsm        _asm;
+  IrInstrCreate create;
+  IrInstrAssign assign;
+  IrInstrRetVal ret_val;
+  IrInstrIf     _if;
+  IrInstrWhile  _while;
+  IrInstrJump   jump;
+  IrInstrLabel  label;
+  IrInstrCall   call;
+  IrInstrAsm    _asm;
 } IrInstrAs;
 
 typedef struct {

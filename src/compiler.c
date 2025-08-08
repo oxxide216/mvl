@@ -58,6 +58,11 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
     IrInstr *ir_instr = ir_proc->instrs.items + i;
 
     switch (ir_instr->kind) {
+    case IrInstrKindCreate: {
+      ValueKind kind = type_kinds_value_kinds_table[ir_instr->as.create.dest_type->kind];
+      proc_create(proc, ir_instr->as.create.dest, kind);
+    } break;
+
     case IrInstrKindAssign: {
       Arg arg = ir_arg_to_arg(&ir_instr->as.assign.arg);
       proc_assign(proc, ir_instr->as.assign.dest, arg);
@@ -159,7 +164,10 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
 
           if (code.ptr[i] == '@') {
             is_dest_var = true;
-          } else if (code.ptr[i] == 'a') {
+            ++i;
+          }
+
+          if (code.ptr[i] == 'a') {
             target_loc_kind = TargetLocKindAny;
           } else if (code.ptr[i] == 'i') {
             target_loc_kind = TargetLocKindImm;

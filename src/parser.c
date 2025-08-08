@@ -452,9 +452,14 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
 
     switch (token->id) {
     case TT_IDENT: {
-      Token *next = parser_expect_token(parser, MASK(TT_ASSIGN) | MASK(TT_OPAREN));
+      Token *next = parser_expect_token(parser, MASK(TT_COLON) | MASK(TT_ASSIGN) |
+                                                MASK(TT_OPAREN));
 
-      if (next->id == TT_ASSIGN) {
+      if (next->id == TT_COLON) {
+        Type *dest_type = parser_parse_type(parser);
+        IrInstr instr = { IrInstrKindCreate, { .create = { token->lexeme, dest_type } } };
+        DA_APPEND(*instrs, instr);
+      } else if (next->id == TT_ASSIGN) {
         next = parser_peek_token(parser, 0);
         if (next->id == TT_IDENT) {
           next = parser_peek_token(parser, 1);
