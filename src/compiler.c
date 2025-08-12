@@ -182,11 +182,12 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
             exit(1);
           }
 
-          segments_push_var(&segments, var_names->items[var_index],
-                            target_loc_kind, is_dest_var);
-
-          if (!is_dest_var)
-            ++var_index;
+          if (is_dest_var)
+            segments_push_var(&segments, (Str) {0},
+                              target_loc_kind, is_dest_var);
+          else
+            segments_push_var(&segments, var_names->items[var_index++],
+                              target_loc_kind, is_dest_var);
         } else {
           sb_push_char(&sb, code.ptr[i]);
         }
