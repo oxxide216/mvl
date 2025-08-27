@@ -2,13 +2,13 @@
 #define SHL_ARENA_IMPLEMENTATION
 #define SHL_DEFS_LL_ALLOC aalloc
 
-#include "../libs/mvm/mvm.h"
-#include "../libs/mvm/misc.h"
+#include "mvm/src/mvm.h"
+#include "mvm/src/misc.h"
 #include "shl_str.h"
 #include "shl_arena.h"
 #include "shl_log.h"
 #define LEXGEN_TRANSITION_TABLE_IMPLEMENTATION
-#include "../libs/lexgen-runtime/runtime.h"
+#include "lexgen/runtime-src/runtime.h"
 #include "../grammar.h"
 #include "io.h"
 #include "parser.h"

@@ -1,0 +1,6 @@
+[submodule "libs/mvm"]
+	path = libs/mvm
+	url = https://github.com/oxxide216/mvm
+[submodule "libs/lexgen"]
+	path = libs/lexgen
+	url = https://github.com/oxxide216/lexgen

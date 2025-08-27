@@ -3,7 +3,7 @@
 #include "lexer.h"
 #include "shl_log.h"
 #include "shl_arena.h"
-#include "../libs/lexgen-runtime/runtime.h"
+#include "lexgen/runtime-src/runtime.h"
 #include "../grammar.h"
 
 static char escape_char(char _char) {

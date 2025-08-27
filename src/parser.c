@@ -2,8 +2,8 @@
 #include <ctype.h>
 
 #include "parser.h"
-#include "../libs/mvm/misc.h"
-#include "../libs/lexgen-runtime/runtime.h"
+#include "mvm/src/misc.h"
+#include "lexgen/runtime-src/runtime.h"
 #include "../grammar.h"
 #include "shl_log.h"
 #include "ir.h"

@@ -1,7 +1,7 @@
 #ifndef IR_H
 #define IR_H
 
-#include "../libs/mvm/mvm.h"
+#include "mvm/src/mvm.h"
 #include "shl_defs.h"
 
 typedef enum {

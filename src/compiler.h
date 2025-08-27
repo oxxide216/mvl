@@ -1,7 +1,7 @@
 #ifndef COMPILER_H
 #define COMPILER_H
 
-#include "../libs/mvm/mvm.h"
+#include "mvm/src/mvm.h"
 #include "ir.h"
 
 Program compile_ir(Ir *ir);
