@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 #ifndef SHL_DEFS_DA_ALLOC
 #define SHL_DEFS_DA_ALLOC malloc
