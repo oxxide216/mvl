@@ -1,7 +1,7 @@
 proc main() -> s64:
-  #result = add(2, 2)
+  result = add(2, 2)
   result = inline_add(2, 2)
-  #inline_add(2, 2)
+  inline_add(2, 2)
 
   retval result
 end
