@@ -1,13 +1,8 @@
 proc main() -> s64:
   a = 2
   b = 5
-  #c = asm s64 "mov @a,@i" [c, a]
-  #asm "add @a,@i" [c, b]
-  #retval c
-
-  r = asm s64 "lea @r,@m" [r, a]
-  asm "mov [@i],@r" [r, b]
-  #retval r
-  c = asm s64 "mov @r,[@i]" [c, r]
+  r = asm s64 "lea @@r,@m" [a]
+  asm "mov qword[@i],@r" [r, b]
+  c = asm s64 "mov @@r,qword[@i]" [r]
   retval c
 end
