@@ -89,8 +89,8 @@ static Str token_id_names[] = {
   STR_LIT("`=`"),
   STR_LIT("`->`"),
   STR_LIT("'&'"),
-  STR_LIT("`*`"),
   STR_LIT("`$`"),
+  STR_LIT("operator"),
 };
 
 static Type unit_type = { TypeKindUnit, NULL };
@@ -469,9 +469,23 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
             IrInstr instr = parser_parse_proc_call(parser, callee_name_token->lexeme, token->lexeme);
             DA_APPEND(*instrs, instr);
           } else {
-            IrArg arg = parser_parse_arg(parser);
-            IrInstr instr = { IrInstrKindAssign, { .assign = { token->lexeme, arg } } };
-            DA_APPEND(*instrs, instr);
+            IrArg arg0 = parser_parse_arg(parser);
+
+            Token *op_token = NULL;
+            if (next->id == TT_REF || next->id == TT_OP)
+              op_token = parser_next_token(parser);
+
+            if (op_token) {
+              IrArg arg1 = parser_parse_arg(parser);
+              IrInstr instr = {
+                IrInstrKindBinOp,
+                { .bin_op = { token->lexeme, op_token->lexeme, arg0, arg1 } },
+              };
+              DA_APPEND(*instrs, instr);
+            } else {
+              IrInstr instr = { IrInstrKindAssign, { .assign = { token->lexeme, arg0 } } };
+              DA_APPEND(*instrs, instr);
+            }
           }
         } else if (next->id == TT_ASM) {
           parser_next_token(parser);
@@ -479,10 +493,33 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
 
           IrInstr instr = parser_parse_asm(parser, token->lexeme, dest_type);
           DA_APPEND(*instrs, instr);
-        } else {
+        } else if (next->id == TT_REF || next->id == TT_OP) {
+          Token *op_token = parser_next_token(parser);
           IrArg arg = parser_parse_arg(parser);
-          IrInstr instr = { IrInstrKindAssign, { .assign = { token->lexeme, arg } } };
+          IrInstr instr = {
+            IrInstrKindUnOp,
+            { .un_op = { token->lexeme, op_token->lexeme, arg } },
+          };
           DA_APPEND(*instrs, instr);
+        } else {
+          IrArg arg0 = parser_parse_arg(parser);
+
+          Token *op_token = NULL;
+          next = parser_peek_token(parser, 0);
+          if (next->id == TT_REF || next->id == TT_OP)
+            op_token = parser_next_token(parser);
+
+          if (op_token) {
+            IrArg arg1 = parser_parse_arg(parser);
+            IrInstr instr = {
+              IrInstrKindBinOp,
+              { .bin_op = { token->lexeme, op_token->lexeme, arg0, arg1 } },
+            };
+            DA_APPEND(*instrs, instr);
+          } else {
+            IrInstr instr = { IrInstrKindAssign, { .assign = { token->lexeme, arg0 } } };
+            DA_APPEND(*instrs, instr);
+          }
         }
       } else if (next->id == TT_OPAREN) {
         IrInstr instr = parser_parse_proc_call(parser, token->lexeme, (Str) {0});
@@ -658,6 +695,19 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
     } break;
 
     case TT_RECORD: {} break;
+
+    case TT_REF:
+    case TT_OP: {
+      Token *dest_token = parser_expect_token(parser, MASK(TT_IDENT));
+      parser_expect_token(parser, MASK(TT_ASSIGN));
+      IrArg arg = parser_parse_arg(parser);
+
+      IrInstr instr = {
+        IrInstrKindPreAssignOp,
+        { .pre_assign_op = { dest_token->lexeme, token->lexeme, arg } },
+      };
+      DA_APPEND(*instrs, instr);
+    } break;
 
     default: {
       ERROR(STR_FMT":%u:%u: Unexpected token id: %lu\n",

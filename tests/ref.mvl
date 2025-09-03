@@ -1,29 +1,9 @@
 proc main() -> s64:
   a = 5
-  ref = ref(a)
-  b = deref(ref)
-  put(ref, 4)
-  c = add(a, b)
+  ref = &a
+  b = *ref
+  *ref = 4
+  c = a + b
 
   retval c
-end
-
-proc inline add(a: s64, b: s64) -> s64:
-  c = a
-  asm "add @n,@i" [c, b]
-  retval c
-end
-
-proc inline ref(num: s64) -> s64:
-  ref = asm s64 "lea @@r,@m" [num]
-  retval ref
-end
-
-proc inline put(ref: s64, value: s64):
-  asm "mov qword[@r],@i" [ref, value]
-end
-
-proc inline deref(ref: s64) -> s64:
-  num = asm s64 "mov @@r,qword[@r]" [ref]
-  retval num
 end

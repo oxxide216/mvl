@@ -66,6 +66,9 @@ typedef enum {
   IrInstrKindRetVal,
   IrInstrKindCall,
   IrInstrKindAsm,
+  IrInstrKindBinOp,
+  IrInstrKindUnOp,
+  IrInstrKindPreAssignOp,
 } IrInstrKind;
 
 typedef struct {
@@ -120,16 +123,38 @@ typedef struct {
   VarNames       var_names;
 } IrInstrAsm;
 
+typedef struct {
+  Str dest;
+  Str op;
+  IrArg arg0;
+  IrArg arg1;
+} IrInstrBinOp;
+
+typedef struct {
+  Str dest;
+  Str op;
+  IrArg arg;
+} IrInstrUnOp;
+
+typedef struct {
+  Str dest;
+  Str op;
+  IrArg arg;
+} IrInstrPreAssignOp;
+
 typedef union {
-  IrInstrCreate create;
-  IrInstrAssign assign;
-  IrInstrRetVal ret_val;
-  IrInstrIf     _if;
-  IrInstrWhile  _while;
-  IrInstrJump   jump;
-  IrInstrLabel  label;
-  IrInstrCall   call;
-  IrInstrAsm    _asm;
+  IrInstrCreate       create;
+  IrInstrAssign       assign;
+  IrInstrRetVal       ret_val;
+  IrInstrIf           _if;
+  IrInstrWhile        _while;
+  IrInstrJump         jump;
+  IrInstrLabel        label;
+  IrInstrCall         call;
+  IrInstrAsm          _asm;
+  IrInstrBinOp        bin_op;
+  IrInstrUnOp         un_op;
+  IrInstrPreAssignOp  pre_assign_op;
 } IrInstrAs;
 
 typedef struct {

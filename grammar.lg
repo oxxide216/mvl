@@ -40,5 +40,6 @@ ls=<
 assign==
 right_arrow=\->
 ref=&
-deref=\*
 record_create=$
+
+op=(\+|\-|\*|/|&|<|>|$|%|^|\|)+

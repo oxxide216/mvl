@@ -1,14 +1,9 @@
-macro add(a, b) -> r:
-  r = a
-  asm "add @,@" r b
-end
-
 proc main() -> s64:
   i = 0
   while i < 10:
     #str = s64_to_str(i)
     #println(str)
-    i = !add(i, 1)
+    i = i + 1
   end
 
   retval i

@@ -8,12 +8,12 @@ end
 
 proc add(a: s64, b: s64) -> s64:
   c = a
-  c = asm s64 "add @@a,@i" [b]
+  c = asm s64 "add @@n,@i" [b]
   retval c
 end
 
 proc inline inline_add(a: s64, b: s64) -> s64:
   c = a
-  c = asm s64 "add @@a,@i" [b]
+  c = asm s64 "add @@n,@i" [b]
   retval c
 end
