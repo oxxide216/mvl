@@ -1,12 +1,7 @@
-#define SHL_STR_IMPLEMENTATION
-#define SHL_ARENA_IMPLEMENTATION
 #define SHL_DEFS_LL_ALLOC aalloc
 
 #include "mvm/src/mvm.h"
 #include "mvm/src/misc.h"
-#include "shl_str.h"
-#include "shl_arena.h"
-#include "shl_log.h"
 #define LEXGEN_TRANSITION_TABLE_IMPLEMENTATION
 #include "lexgen/runtime-src/runtime.h"
 #include "../grammar.h"
@@ -14,6 +9,11 @@
 #include "parser.h"
 #include "ir.h"
 #include "compiler.h"
+#define SHL_STR_IMPLEMENTATION
+#include "shl_str.h"
+#define SHL_ARENA_IMPLEMENTATION
+#include "shl_arena.h"
+#include "shl_log.h"
 
 static char *str_to_cstr(Str str) {
   char *result = malloc((str.len + 1) * sizeof(char));

@@ -26,13 +26,34 @@ void proc_compile_bin_intrinsic(Procedure *proc, Str dest, Str op, IrArg arg0, I
     segments_push_var(&segments, dest, TargetLocKindNotImm, true);
     segments_push_text(&segments, STR_LIT(","));
     segments_push_ir_arg(&segments, &arg1, TargetLocKindImm, false);
-  } else if (str_eq(op, STR_LIT("*")) || str_eq(op, STR_LIT("/"))) {
+  } else if (str_eq(op, STR_LIT("*")) || str_eq(op, STR_LIT("/")) || str_eq(op, STR_LIT("%"))) {
     segments_push_text(&segments, STR_LIT("mov rax,"));
-    segments_push_ir_arg(&segments, &arg0, TargetLocKindImm, true);
+    segments_push_ir_arg(&segments, &arg0, TargetLocKindImm, false);
     if (str_eq(op, STR_LIT("*")))
       segments_push_text(&segments, STR_LIT("\n  imul "));
     else
       segments_push_text(&segments, STR_LIT("\n  idiv "));
+    segments_push_ir_arg(&segments, &arg1, TargetLocKindImm, false);
+    segments_push_text(&segments, STR_LIT("\n  mov "));
+    segments_push_var(&segments, dest, TargetLocKindAny, true);
+    if (str_eq(op, STR_LIT("%")))
+      segments_push_text(&segments, STR_LIT(",rdx"));
+    else
+      segments_push_text(&segments, STR_LIT(",rax"));
+  } else if (str_eq(op, STR_LIT("&"))) {
+    segments_push_text(&segments, STR_LIT("and "));
+    segments_push_var(&segments, dest, TargetLocKindNotImm, true);
+    segments_push_text(&segments, STR_LIT(","));
+    segments_push_ir_arg(&segments, &arg1, TargetLocKindImm, false);
+  } else if (str_eq(op, STR_LIT("|"))) {
+    segments_push_text(&segments, STR_LIT("or "));
+    segments_push_var(&segments, dest, TargetLocKindNotImm, true);
+    segments_push_text(&segments, STR_LIT(","));
+    segments_push_ir_arg(&segments, &arg1, TargetLocKindImm, false);
+  } else if (str_eq(op, STR_LIT("^"))) {
+    segments_push_text(&segments, STR_LIT("xor "));
+    segments_push_var(&segments, dest, TargetLocKindNotImm, true);
+    segments_push_text(&segments, STR_LIT(","));
     segments_push_ir_arg(&segments, &arg1, TargetLocKindImm, false);
   } else {
     ERROR("Unknown binary operator: `"STR_FMT"`\n", STR_ARG(op));
@@ -66,6 +87,11 @@ void proc_compile_un_intrinsic(Procedure *proc, Str dest, Str op, IrArg arg) {
       segments_push_var(&segments, arg.as.var, TargetLocKindReg, false);
     }
     segments_push_text(&segments, STR_LIT("]"));
+  } else if (str_eq(op, STR_LIT("-"))) {
+    proc_assign(proc, dest, ir_arg_to_arg(&arg));
+
+    segments_push_text(&segments, STR_LIT("neg "));
+    segments_push_var(&segments, dest, TargetLocKindReg, true);
   } else {
     ERROR("Unknown unary operator: `"STR_FMT"`\n", STR_ARG(op));
     exit(1);

@@ -3,13 +3,13 @@ include "mem.mvl"
 proc strlen(str: s64) -> s64:
   i = 0
 
-  ptr = !add(str, i)
-  char = *s8 ptr
+  ptr = str + i
+  char = *ptr
 
   while char != 0s8:
-    ptr = !add(str, i)
-    char = *s8 ptr
-    i = !add(i, 1)
+    ptr = str + i
+    char = *ptr
+    i = i + 1
   end
 
   retval i
@@ -25,15 +25,15 @@ proc streq(a: s64, b: s64) -> s64:
 
   i = 0
   while i < a_len:
-    a_ptr = !add(a, i)
-    a_char = *s8 a_ptr
-    b_ptr = !add(b, i)
-    b_char = *s8 b_ptr
+    a_ptr = a + i
+    a_char = *a_ptr
+    b_ptr = b + i
+    b_char = *b_ptr
     if a_char != b_char:
       retval 0
     end
 
-    i = !add(i, 1)
+    i = i + 1
   end
 
   retval 1
@@ -42,33 +42,33 @@ end
 proc s64_to_str(num: s64) -> s64:
   buf_cap = 1
   buf_size = 0
-  size_to_alloc = !add(buf_cap, 1)
+  size_to_alloc = buf_cap + 1
   buf = malloc(size_to_alloc)
   is_neg = 0
 
   if num < 0:
     *buf = '-'
-    buf_size = !add(buf_size, 1)
+    buf_size = buf_size + 1
     is_neg = 1
-    num = !neg(num)
+    num = -num
   end
 
   while 1 == 1:
     if buf_size >= buf_cap:
-      buf_cap = !mul(buf_cap, 2)
-      size_to_alloc = !add(buf_cap, 1)
+      buf_cap = buf_cap * 2
+      size_to_alloc = buf_cap + 1
       buf = realloc(buf, size_to_alloc)
     end
 
-    digit = !mod(num, 10)
-    char = !add(digit, '0')
+    digit = num % 10
+    char = digit + '0'
     char_s8 = cast s8 char
 
-    ptr = !add(buf, buf_size)
+    ptr = buf + buf_size
     *ptr = char_s8
 
-    num = !div(num, 10)
-    buf_size = !add(buf_size, 1)
+    num = num / 10
+    buf_size = buf_size + 1
 
     if num == 0:
       break
@@ -76,20 +76,20 @@ proc s64_to_str(num: s64) -> s64:
   end
 
   i = is_neg
-  j = !sub(buf_size, 1)
+  j = buf_size - 1
   while i < j:
-    ptr_a = !add(buf, i)
-    ptr_b = !add(buf, j)
-    temp_a = *s8 ptr_a
-    temp_b = *s8 ptr_b
+    ptr_a = buf + i
+    ptr_b = buf + j
+    temp_a = *ptr_a
+    temp_b = *ptr_b
     *ptr_a = temp_b
     *ptr_b = temp_a
 
-    i = !add(i, 1)
-    j = !sub(j, 1)
+    i = i + 1
+    j = j - 1
   end
 
-  ptr = !add(buf, buf_size)
+  ptr = buf + buf_size
   *ptr = 0s8
 
   retval buf
@@ -101,7 +101,7 @@ proc str_to_s64(str: s64) -> s64:
   i = 0
 
   ptr = str
-  char = *s8 str
+  char = *str
 
   if char == 0s8:
     retval 0
@@ -113,8 +113,8 @@ proc str_to_s64(str: s64) -> s64:
   end
 
   while 1 == 1:
-    ptr = !add(str, i)
-    char = *s8 ptr
+    ptr = str + i
+    char = *ptr
 
     zero = '0'
     zero_s8 = cast s8 zero
@@ -128,17 +128,17 @@ proc str_to_s64(str: s64) -> s64:
       break
     end
 
-    digit = !sub(char, zero_s8)
+    digit = char - zero_s8
     digit_s64 = cast s64 digit
 
-    num = !mul(num, 10)
-    num = !add(num, digit_s64)
+    num = num * 10
+    num = num + digit_s64
 
-    i = !add(i, 1)
+    i = i + 1
   end
 
   if is_neg == 1:
-    num = !neg(num)
+    num = -num
   end
 
   retval num

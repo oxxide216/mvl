@@ -33,3 +33,19 @@ Arg ir_arg_to_arg(IrArg *ir_arg) {
 
   return arg;
 }
+
+ValueKind type_to_value_kind(Type *type) {
+  switch (type->kind) {
+  case TypeKindUnit: return ValueKindUnit;
+  case TypeKindS64:  return ValueKindS64;
+  case TypeKindS32:  return ValueKindS32;
+  case TypeKindS16:  return ValueKindS16;
+  case TypeKindS8:   return ValueKindS8;
+  case TypeKindU64:  return ValueKindS64;
+  case TypeKindU32:  return ValueKindU32;
+  case TypeKindU16:  return ValueKindU16;
+  case TypeKindU8:   return ValueKindU8;
+  case TypeKindPtr:  return ValueKindS64;
+  default:           return ValueKindUnit;
+  }
+}

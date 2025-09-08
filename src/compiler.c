@@ -191,6 +191,14 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
                                         instr_pre_assign_op->arg);
     } break;
 
+    case IrInstrKindCast: {
+      IrInstrCast *instr_cast = &ir_instr->as.cast;
+
+      proc_cast(proc, instr_cast->dest,
+                type_to_value_kind(instr_cast->type),
+                ir_arg_to_arg(&instr_cast->arg));
+    } break;
+
     default: {
       ERROR("Unexpected IR instr kind: %u\n", ir_instr->kind);
       exit(1);

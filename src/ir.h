@@ -69,6 +69,7 @@ typedef enum {
   IrInstrKindBinOp,
   IrInstrKindUnOp,
   IrInstrKindPreAssignOp,
+  IrInstrKindCast,
 } IrInstrKind;
 
 typedef struct {
@@ -142,6 +143,12 @@ typedef struct {
   IrArg arg;
 } IrInstrPreAssignOp;
 
+typedef struct {
+  Str    dest;
+  Type  *type;
+  IrArg  arg;
+} IrInstrCast;
+
 typedef union {
   IrInstrCreate       create;
   IrInstrAssign       assign;
@@ -155,6 +162,7 @@ typedef union {
   IrInstrBinOp        bin_op;
   IrInstrUnOp         un_op;
   IrInstrPreAssignOp  pre_assign_op;
+  IrInstrCast         cast;
 } IrInstrAs;
 
 typedef struct {

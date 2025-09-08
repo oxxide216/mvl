@@ -1,0 +1,7 @@
+include "std/unix.mvl"
+include "std/str.mvl"
+
+proc main():
+  str = s64_to_str(64)
+  write(1, str, 12)
+end

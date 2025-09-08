@@ -1,10 +1,10 @@
 include "str.mvl"
 
 proc malloc(size: s64) -> s64:
-  size = !add(size, 8)
+  size = size + 8
 
-  PROT = !or(PROT_READ, PROT_WRITE)
-  FLAGS = !or(MAP_PRIVATE, MAP_ANONYMOUS)
+  PROT = PROT_READ | PROT_WRITE
+  FLAGS = MAP_PRIVATE | MAP_ANONYMOUS
 
   ptr = mmap(0, size, PROT, FLAGS, -1, 0)
 
@@ -13,14 +13,14 @@ proc malloc(size: s64) -> s64:
   end
 
   *ptr = size
-  ptr = !add(ptr, 8)
+  ptr = ptr + 8
 
   retval ptr
 end
 
 proc realloc(ptr: s64, size: s64) -> s64:
-  size_ptr = !sub(ptr, 8)
-  size = *s64 size_ptr
+  size_ptr = ptr - 8
+  size = *size_ptr
 
   new_ptr = malloc(size)
   memcopy(new_ptr, ptr, size)
@@ -30,8 +30,8 @@ proc realloc(ptr: s64, size: s64) -> s64:
 end
 
 proc free(ptr: s64):
-  ptr = !sub(ptr, 8)
-  size = *s64 ptr
+  ptr = ptr - 8
+  size = *ptr
   munmap(ptr, size)
 end
 
@@ -41,12 +41,12 @@ proc memcopy(dest: s64, src: s64, size: s64):
   src_ptr = src
 
   while i < size:
-    byte = *s8 src_ptr
+    byte = *src_ptr
     *dest_ptr = byte
 
-    i = !add(i, 1)
-    dest_ptr = !add(dest_ptr, 1)
-    src_ptr = !add(src_ptr, 1)
+    i = i + 1
+    dest_ptr = dest_ptr + 1
+    src_ptr = src_ptr + 1
   end
 end
 
@@ -56,17 +56,17 @@ proc memmove(dest: s64, src: s64, size: s64):
   end
 
   if dest > src:
-    i = !sub(size, 1)
-    dest_ptr = !add(dest, i)
-    src_ptr = !add(src, i)
+    i = size - 1
+    dest_ptr = dest + i
+    src_ptr = src + i
 
     while i >= 0:
-      byte = *u8 src_ptr
+      byte = *src_ptr
       *dest_ptr = byte
 
-      i = !sub(i, 1)
-      dest_ptr = !sub(dest_ptr, 1)
-      src_ptr = !sub(src_ptr, 1)
+      i = i - 1
+      dest_ptr = dest_ptr - 1
+      src_ptr = src_ptr - 1
     end
   else:
     i = 0
@@ -74,12 +74,12 @@ proc memmove(dest: s64, src: s64, size: s64):
     src_ptr = src
 
     while i < size:
-      byte = *u8 src_ptr
+      byte = *src_ptr
       *dest_ptr = byte
 
-      i = !add(i, 1)
-      dest_ptr = !add(dest_ptr, 1)
-      src_ptr = !add(src_ptr, 1)
+      i = i + 1
+      dest_ptr = dest_ptr + 1
+      src_ptr = src_ptr + 1
     end
   end
 end

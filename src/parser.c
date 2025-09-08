@@ -7,6 +7,7 @@
 #include "../grammar.h"
 #include "shl_log.h"
 #include "ir.h"
+#include "ir_to_mvm.h"
 #include "shl_arena.h"
 
 typedef enum {
@@ -30,7 +31,12 @@ typedef struct {
 
 typedef Da(Var) Vars;
 
-typedef Da(Value) Values;
+typedef struct {
+  Str        name;
+  IrArgValue value;
+} ParserStaticVariable;
+
+typedef Da(ParserStaticVariable) ParserStaticVariables;
 
 typedef struct {
   Str  name;
@@ -38,15 +44,15 @@ typedef struct {
   u32  size;
 } ParserStaticBuffer;
 
-typedef Da(ParserStaticBuffer) StaticBuffers;
+typedef Da(ParserStaticBuffer) ParserStaticData;
 
 typedef struct {
-  Tokens        *tokens;
-  u32            index;
-  Blocks         blocks;
-  Values         static_var_values;
-  StaticBuffers  static_buffers;
-  u32            max_labels_count;
+  Tokens                *tokens;
+  u32                    index;
+  Blocks                 blocks;
+  ParserStaticVariables  static_vars;
+  ParserStaticData       static_data;
+  u32                    max_labels_count;
 } Parser;
 
 static Str token_id_names[] = {
@@ -303,21 +309,22 @@ static Str create_static_var_name(u32 id) {
 }
 
 static IrArg parser_parse_arg(Parser *parser) {
-  Token *token = parser_expect_token(parser, MASK(TT_NUMBER) | MASK(TT_IDENT) | MASK(TT_STR_LIT));
+  Token *token = parser_expect_token(parser, MASK(TT_NUMBER) | MASK(TT_IDENT) |
+                                             MASK(TT_STR_LIT) | MASK(TT_CHAR_LIT));
   IrArg arg;
 
-  if (token->id == TT_NUMBER) {
+  if (token->id == TT_NUMBER || token->id == TT_CHAR_LIT) {
     arg = str_to_ir_arg(token->lexeme, IrArgKindValue);
   } else if (token->id == TT_IDENT) {
     arg = str_to_ir_arg(token->lexeme, IrArgKindVar);
   } else if (token->id == TT_STR_LIT) {
-    Str buffer_name = create_static_var_name(parser->static_buffers.len);
+    Str buffer_name = create_static_var_name(parser->static_data.len);
     ParserStaticBuffer buffer = {
       buffer_name,
       (u8 *) token->lexeme.ptr,
       token->lexeme.len * sizeof(token->lexeme.ptr[0]),
     };
-    DA_APPEND(parser->static_buffers, buffer);
+    DA_APPEND(parser->static_data, buffer);
 
     arg = str_to_ir_arg(buffer_name, IrArgKindVar);
   }
@@ -501,6 +508,15 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
             { .un_op = { token->lexeme, op_token->lexeme, arg } },
           };
           DA_APPEND(*instrs, instr);
+        } else if (next->id == TT_CAST) {
+          parser_next_token(parser);
+          Type *type = parser_parse_type(parser);
+          IrArg arg = parser_parse_arg(parser);
+          IrInstr instr = {
+            IrInstrKindCast,
+            { .cast = { token->lexeme, type, arg } },
+          };
+          DA_APPEND(*instrs, instr);
         } else {
           IrArg arg0 = parser_parse_arg(parser);
 
@@ -648,7 +664,7 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
     case TT_BREAK:
     case TT_CONTINUE: {
       Block *loop_block = NULL;
-      for (u32 i = parser->blocks.len; i > 0; ++i) {
+      for (u32 i = parser->blocks.len; i > 0; --i) {
         if (parser->blocks.items[i - 1].kind == BlockKindWhile) {
           loop_block = parser->blocks.items + i - 1;
           break;
@@ -742,6 +758,21 @@ static bool parser_parse_global_instr(Parser *parser, Ir *ir,
       DA_APPEND(ir->procs, new_proc);
     } break;
 
+    case TT_STATIC: {
+      Token *name_token = parser_expect_token(parser, MASK(TT_IDENT));
+      parser_expect_token(parser, MASK(TT_ASSIGN));
+      IrArg arg = parser_parse_arg(parser);
+      if (arg.kind == IrArgKindVar) {
+        ERROR("Only value can be assigned to a static variable\n");
+        exit(1);
+      }
+
+      ParserStaticVariable static_var = { name_token->lexeme, arg.as.value };
+      DA_APPEND(parser->static_vars, static_var);
+    } break;
+
+    case TT_RECORD: {} break;
+
     case TT_INCLUDE: {
       parser_expect_token(parser, MASK(TT_STR_LIT));
     } break;
@@ -776,18 +807,18 @@ Ir parse(Tokens *tokens) {
 
   Ir ir = parser_parse(&parser);
 
-  for (u32 i = 0; i < parser.static_var_values.len; ++i) {
-    Str var_name = create_static_var_name(i);
-    StaticVariable var = { var_name, parser.static_var_values.items[i] };
+  for (u32 i = 0; i < parser.static_vars.len; ++i) {
+    Str name = parser.static_vars.items[i].name;
+    IrArgValue value = parser.static_vars.items[i].value;
+    StaticVariable var = { name, ir_arg_value_to_value(&value) };
     DA_APPEND(ir.static_vars, var);
   }
 
-  for (u32 i = 0; i < parser.static_buffers.len; ++i) {
-    Str var_name = create_static_var_name(i + parser.static_var_values.len);
+  for (u32 i = 0; i < parser.static_data.len; ++i) {
     StaticBuffer buffer = {
-      var_name,
-      parser.static_buffers.items[i].data,
-      parser.static_buffers.items[i].size,
+      parser.static_data.items[i].name,
+      parser.static_data.items[i].data,
+      parser.static_data.items[i].size,
     };
     DA_APPEND(ir.static_data, buffer);
   }
