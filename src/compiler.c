@@ -1,14 +1,14 @@
 #include "compiler.h"
 #include "intrinsic.h"
 #include "ir_to_mvm.h"
-#include "shl_log.h"
+#include "shl/shl-log.h"
 
 typedef struct {
   Program  program;
   Ir      *ir;
 } Compiler;
 
-static ValueKind type_kinds_value_kinds_table[TypeKindsCount] = {
+ValueKind type_kinds_value_kinds_table[TypeKindsCount] = {
   [TypeKindUnit] = ValueKindUnit,
   [TypeKindS64] = ValueKindS64,
   [TypeKindS32] = ValueKindS32,
@@ -19,6 +19,19 @@ static ValueKind type_kinds_value_kinds_table[TypeKindsCount] = {
   [TypeKindU16] = ValueKindU16,
   [TypeKindU8] = ValueKindU8,
   [TypeKindPtr] = ValueKindS64,
+};
+
+Str type_kinds_ptr_prefixes_table[TypeKindsCount] = {
+  [TypeKindUnit] = STR_LIT(""),
+  [TypeKindS64] = STR_LIT("qword"),
+  [TypeKindS32] = STR_LIT("dword"),
+  [TypeKindS16] = STR_LIT("word"),
+  [TypeKindS8] = STR_LIT("byte"),
+  [TypeKindU64] = STR_LIT("qword"),
+  [TypeKindU32] = STR_LIT("dword"),
+  [TypeKindU16] = STR_LIT("word"),
+  [TypeKindU8] = STR_LIT("byte"),
+  [TypeKindPtr] = STR_LIT("qword"),
 };
 
 static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_index) {
@@ -88,10 +101,12 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
         DA_APPEND(args, arg);
       }
 
+      Str mangled_callee_name = mangle_proc_name_with_args(callee_name, ir_args);
+
       if (dest.len > 0)
-        proc_call_assign(proc, dest, callee_name, args);
+        proc_call_assign(proc, dest, mangled_callee_name, args);
       else
-        proc_call(proc, callee_name, args);
+        proc_call(proc, mangled_callee_name, args);
     } break;
 
     case IrInstrKindAsm: {
@@ -199,6 +214,14 @@ static void compile_ir_instrs(Compiler *compiler, Procedure *proc, u32 ir_proc_i
                 ir_arg_to_arg(&instr_cast->arg));
     } break;
 
+    case IrInstrKindDeref: {
+      IrInstrDeref *instr_deref = &ir_instr->as.deref;
+
+      proc_compile_deref_intrinsic(proc, instr_deref->dest,
+                                   instr_deref->type,
+                                   instr_deref->arg);
+    } break;
+
     default: {
       ERROR("Unexpected IR instr kind: %u\n", ir_instr->kind);
       exit(1);
@@ -236,7 +259,9 @@ Program compile_ir(Ir *ir) {
       DA_APPEND(params, proc_param);
     }
 
-    Procedure *proc = program_push_proc(&compiler.program, ir_proc->name,
+    Str mangled_name = mangle_proc_name_with_params(ir_proc->name, &ir_proc->params);
+
+    Procedure *proc = program_push_proc(&compiler.program, mangled_name,
                                         ret_val_kind, params, ir_proc->is_naked,
                                         ir_proc->is_inlined);
 

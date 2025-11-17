@@ -1,7 +1,7 @@
 #include "intrinsic.h"
 #include "mvm/src/misc.h"
 #include "ir_to_mvm.h"
-#include "shl_log.h"
+#include "shl/shl-log.h"
 
 static void segments_push_ir_arg(InlineAsmSegments *segments, IrArg *arg,
                                  TargetLocKind target_loc_kind, bool is_dest_var) {
@@ -76,17 +76,6 @@ void proc_compile_un_intrinsic(Procedure *proc, Str dest, Str op, IrArg arg) {
     } else {
       segments_push_var(&segments, arg.as.var, TargetLocKindMem, false);
     }
-  } else if (str_eq(op, STR_LIT("*"))) {
-    segments_push_text(&segments, STR_LIT("mov "));
-    segments_push_var(&segments, dest, TargetLocKindReg, true);
-    segments_push_text(&segments, STR_LIT(",qword["));
-    if (arg.kind == IrArgKindValue) {
-      Value value = ir_arg_value_to_value(&arg.as.value);
-      segments_push_text(&segments, value_to_str(value));
-    } else {
-      segments_push_var(&segments, arg.as.var, TargetLocKindReg, false);
-    }
-    segments_push_text(&segments, STR_LIT("]"));
   } else if (str_eq(op, STR_LIT("-"))) {
     proc_assign(proc, dest, ir_arg_to_arg(&arg));
 
@@ -114,4 +103,23 @@ void proc_compile_pre_assign_intrinsic(Procedure *proc, Str dest, Str op, IrArg 
   }
 
   proc_inline_asm(proc, dest, ValueKindUnit, segments);
+}
+
+void proc_compile_deref_intrinsic(Procedure *proc, Str dest, Type *type, IrArg arg) {
+  InlineAsmSegments segments = {0};
+
+  segments_push_text(&segments, STR_LIT("mov "));
+  segments_push_var(&segments, dest, TargetLocKindReg, true);
+  segments_push_text(&segments, STR_LIT(","));
+  segments_push_text(&segments, type_kinds_ptr_prefixes_table[type->kind]);
+  segments_push_text(&segments, STR_LIT("["));
+  if (arg.kind == IrArgKindValue) {
+    Value value = ir_arg_value_to_value(&arg.as.value);
+    segments_push_text(&segments, value_to_str(value));
+  } else {
+    segments_push_var(&segments, arg.as.var, TargetLocKindReg, false);
+  }
+  segments_push_text(&segments, STR_LIT("]"));
+
+  proc_inline_asm(proc, dest, type_kinds_value_kinds_table[type->kind], segments);
 }

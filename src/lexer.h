@@ -1,8 +1,8 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#include "shl_defs.h"
-#include "shl_str.h"
+#include "shl/shl-defs.h"
+#include "shl/shl-str.h"
 
 #define MASK(index) ((u64) 1 << (index))
 

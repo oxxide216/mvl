@@ -2,7 +2,7 @@
 #define IR_H
 
 #include "mvm/src/mvm.h"
-#include "shl_defs.h"
+#include "shl/shl-defs.h"
 
 typedef enum {
   TypeKindUnit = 0,
@@ -70,6 +70,7 @@ typedef enum {
   IrInstrKindUnOp,
   IrInstrKindPreAssignOp,
   IrInstrKindCast,
+  IrInstrKindDeref,
 } IrInstrKind;
 
 typedef struct {
@@ -149,6 +150,12 @@ typedef struct {
   IrArg  arg;
 } IrInstrCast;
 
+typedef struct {
+  Str    dest;
+  Type  *type;
+  IrArg  arg;
+} IrInstrDeref;
+
 typedef union {
   IrInstrCreate       create;
   IrInstrAssign       assign;
@@ -163,6 +170,7 @@ typedef union {
   IrInstrUnOp         un_op;
   IrInstrPreAssignOp  pre_assign_op;
   IrInstrCast         cast;
+  IrInstrDeref        deref;
 } IrInstrAs;
 
 typedef struct {
@@ -210,5 +218,9 @@ typedef struct {
   StaticVariables static_vars;
   StaticData      static_data;
 } Ir;
+
+// Defined in compiler.c
+extern ValueKind type_kinds_value_kinds_table[TypeKindsCount];
+extern Str type_kinds_ptr_prefixes_table[TypeKindsCount];
 
 #endif // IR_H

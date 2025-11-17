@@ -20,7 +20,7 @@ end
 
 proc realloc(ptr: s64, size: s64) -> s64:
   size_ptr = ptr - 8
-  size = *size_ptr
+  size = *s64 size_ptr
 
   new_ptr = malloc(size)
   memcopy(new_ptr, ptr, size)
@@ -31,7 +31,7 @@ end
 
 proc free(ptr: s64):
   ptr = ptr - 8
-  size = *ptr
+  size = *s64 ptr
   munmap(ptr, size)
 end
 
@@ -41,7 +41,7 @@ proc memcopy(dest: s64, src: s64, size: s64):
   src_ptr = src
 
   while i < size:
-    byte = *src_ptr
+    byte = *s8 src_ptr
     *dest_ptr = byte
 
     i = i + 1
@@ -61,7 +61,7 @@ proc memmove(dest: s64, src: s64, size: s64):
     src_ptr = src + i
 
     while i >= 0:
-      byte = *src_ptr
+      byte = *s8 src_ptr
       *dest_ptr = byte
 
       i = i - 1
@@ -74,7 +74,7 @@ proc memmove(dest: s64, src: s64, size: s64):
     src_ptr = src
 
     while i < size:
-      byte = *src_ptr
+      byte = *s8 src_ptr
       *dest_ptr = byte
 
       i = i + 1

@@ -10,10 +10,10 @@
 #include "ir.h"
 #include "compiler.h"
 #define SHL_STR_IMPLEMENTATION
-#include "shl_str.h"
+#include "shl/shl-str.h"
 #define SHL_ARENA_IMPLEMENTATION
-#include "shl_arena.h"
-#include "shl_log.h"
+#include "shl/shl-arena.h"
+#include "shl/shl-log.h"
 
 static char *str_to_cstr(Str str) {
   char *result = malloc((str.len + 1) * sizeof(char));

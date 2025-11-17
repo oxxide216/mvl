@@ -5,10 +5,10 @@
 #include "mvm/src/misc.h"
 #include "lexgen/runtime-src/runtime.h"
 #include "../grammar.h"
-#include "shl_log.h"
 #include "ir.h"
 #include "ir_to_mvm.h"
-#include "shl_arena.h"
+#include "shl/shl-log.h"
+#include "shl/shl-arena.h"
 
 typedef enum {
   BlockKindProc = 0,
@@ -95,6 +95,7 @@ static Str token_id_names[] = {
   STR_LIT("`=`"),
   STR_LIT("`->`"),
   STR_LIT("'&'"),
+  STR_LIT("'*'"),
   STR_LIT("`$`"),
   STR_LIT("operator"),
 };
@@ -212,7 +213,9 @@ static TypeKind str_to_type_kind(Str str) {
   return TypeKindPtr;
 }
 
-static IrArgValue str_to_number_ir_arg_value(Str str) {
+static IrArgValue token_to_number_ir_arg_value(Token *token) {
+  Str str = token->lexeme;
+
   i64 number = 0;
   bool is_neg = false;
   u32 i = 0;
@@ -237,6 +240,15 @@ static IrArgValue str_to_number_ir_arg_value(Str str) {
     str.ptr += i;
     str.len -= i;
 
+    if (token->id == TT_CHAR_LIT) {
+      number = str.ptr[0];
+      ++str.ptr;
+      --str.len;
+    }
+
+    if (str.len == 0)
+      str = STR_LIT("s64");
+
     TypeKind kind = str_to_type_kind(str);
     type->kind = kind;
 
@@ -251,7 +263,10 @@ static IrArgValue str_to_number_ir_arg_value(Str str) {
     case TypeKindU8:  return (IrArgValue) { type, { ._u8 = number } };
 
     default: {
-      ERROR("Unknown type name: "STR_FMT"\n", STR_ARG(str));
+      PERROR(STR_FMT":%u:%u: ", "Unknown type name: "STR_FMT"\n",
+             STR_ARG(token->file_path),
+             token->row + 1, token->col + 1,
+             STR_ARG(str));
       exit(1);
     }
     }
@@ -261,21 +276,23 @@ static IrArgValue str_to_number_ir_arg_value(Str str) {
   return (IrArgValue) { type, { ._s64 = number } };
 }
 
-static IrArg str_to_ir_arg(Str text, IrArgKind kind) {
+static IrArg token_to_ir_arg(Token *token, IrArgKind kind) {
   IrArg ir_arg;
   ir_arg.kind = kind;
 
   switch (kind) {
   case IrArgKindValue: {
-    ir_arg.as.value = str_to_number_ir_arg_value(text);
+    ir_arg.as.value = token_to_number_ir_arg_value(token);
   } break;
 
   case IrArgKindVar: {
-    ir_arg.as.var = text;
+    ir_arg.as.var = token->lexeme;
   } break;
 
   default: {
-    ERROR("Wrong argument kind\n");
+    PERROR(STR_FMT"%u:%u: ", "Wrong argument kind\n",
+           STR_ARG(token->file_path),
+           token->row + 1, token->col + 1);
     exit(1);
   }
   }
@@ -314,19 +331,30 @@ static IrArg parser_parse_arg(Parser *parser) {
   IrArg arg;
 
   if (token->id == TT_NUMBER || token->id == TT_CHAR_LIT) {
-    arg = str_to_ir_arg(token->lexeme, IrArgKindValue);
+    arg = token_to_ir_arg(token, IrArgKindValue);
   } else if (token->id == TT_IDENT) {
-    arg = str_to_ir_arg(token->lexeme, IrArgKindVar);
+    arg = token_to_ir_arg(token, IrArgKindVar);
   } else if (token->id == TT_STR_LIT) {
     Str buffer_name = create_static_var_name(parser->static_data.len);
+    u8 *data = malloc(token->lexeme.len + 1);
+    memcpy(data, token->lexeme.ptr, token->lexeme.len);
+    data[token->lexeme.len] = '\0';
     ParserStaticBuffer buffer = {
       buffer_name,
-      (u8 *) token->lexeme.ptr,
-      token->lexeme.len * sizeof(token->lexeme.ptr[0]),
+      data,
+      token->lexeme.len + 1,
     };
     DA_APPEND(parser->static_data, buffer);
 
-    arg = str_to_ir_arg(buffer_name, IrArgKindVar);
+    Token str_token = {
+      buffer_name,
+      token->id,
+      token->row,
+      token->col,
+      token->file_path,
+    };
+
+    arg = token_to_ir_arg(&str_token, IrArgKindVar);
   }
 
   return arg;
@@ -479,7 +507,7 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
             IrArg arg0 = parser_parse_arg(parser);
 
             Token *op_token = NULL;
-            if (next->id == TT_REF || next->id == TT_OP)
+            if (next->id == TT_REF || next->id == TT_DEREF || next->id == TT_OP)
               op_token = parser_next_token(parser);
 
             if (op_token) {
@@ -517,12 +545,21 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
             { .cast = { token->lexeme, type, arg } },
           };
           DA_APPEND(*instrs, instr);
+        } else if (next->id == TT_DEREF) {
+          parser_next_token(parser);
+          Type *type = parser_parse_type(parser);
+          IrArg arg = parser_parse_arg(parser);
+          IrInstr instr = {
+            IrInstrKindDeref,
+            { .deref = { token->lexeme, type, arg } },
+          };
+          DA_APPEND(*instrs, instr);
         } else {
           IrArg arg0 = parser_parse_arg(parser);
 
           Token *op_token = NULL;
           next = parser_peek_token(parser, 0);
-          if (next->id == TT_REF || next->id == TT_OP)
+          if (next->id == TT_REF || next->id == TT_DEREF || next->id == TT_OP)
             op_token = parser_next_token(parser);
 
           if (op_token) {
@@ -713,6 +750,7 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
     case TT_RECORD: {} break;
 
     case TT_REF:
+    case TT_DEREF:
     case TT_OP: {
       Token *dest_token = parser_expect_token(parser, MASK(TT_IDENT));
       parser_expect_token(parser, MASK(TT_ASSIGN));
@@ -726,9 +764,9 @@ static void parser_parse_proc_instrs(Parser *parser, IrInstrs *instrs) {
     } break;
 
     default: {
-      ERROR(STR_FMT":%u:%u: Unexpected token id: %lu\n",
+      ERROR(STR_FMT":%u:%u: Unexpected statement begin token: `"STR_FMT"`\n",
             STR_ARG(token->file_path), token->row + 1,
-            token->col + 1, token->id);
+            token->col + 1, STR_ARG(token->lexeme));
       exit(1);
     }
     }

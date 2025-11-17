@@ -1,5 +1,5 @@
 #include "ir_to_mvm.h"
-#include "shl_log.h"
+#include "shl/shl-log.h"
 
 Value ir_arg_value_to_value(IrArgValue *value) {
   switch (value->type->kind) {
@@ -48,4 +48,24 @@ ValueKind type_to_value_kind(Type *type) {
   case TypeKindPtr:  return ValueKindS64;
   default:           return ValueKindUnit;
   }
+}
+
+Str mangle_proc_name_with_params(Str name, IrProcParams *params) {
+  StringBuilder sb = {0};
+
+  sb_push_str(&sb, name);
+  sb_push_char(&sb, '@');
+  sb_push_u32(&sb, params->len);
+
+  return sb_to_str(sb);
+}
+
+Str mangle_proc_name_with_args(Str name, IrArgs *args) {
+  StringBuilder sb = {0};
+
+  sb_push_str(&sb, name);
+  sb_push_char(&sb, '@');
+  sb_push_u32(&sb, args->len);
+
+  return sb_to_str(sb);
 }

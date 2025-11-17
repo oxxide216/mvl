@@ -1,14 +1,14 @@
 include "mem.mvl"
 
-proc strlen(str: s64) -> s64:
+proc strlen(str: &s8) -> s64:
   i = 0
 
   ptr = str + i
-  char = *ptr
+  char = *s8 ptr
 
   while char != 0s8:
     ptr = str + i
-    char = *ptr
+    char = *s8 ptr
     i = i + 1
   end
 
@@ -26,9 +26,9 @@ proc streq(a: s64, b: s64) -> s64:
   i = 0
   while i < a_len:
     a_ptr = a + i
-    a_char = *a_ptr
+    a_char = *s8 a_ptr
     b_ptr = b + i
-    b_char = *b_ptr
+    b_char = *s8 b_ptr
     if a_char != b_char:
       retval 0
     end
@@ -80,8 +80,8 @@ proc s64_to_str(num: s64) -> s64:
   while i < j:
     ptr_a = buf + i
     ptr_b = buf + j
-    temp_a = *ptr_a
-    temp_b = *ptr_b
+    temp_a = *s8 ptr_a
+    temp_b = *s8 ptr_b
     *ptr_a = temp_b
     *ptr_b = temp_a
 
@@ -101,7 +101,7 @@ proc str_to_s64(str: s64) -> s64:
   i = 0
 
   ptr = str
-  char = *str
+  char = *s8 str
 
   if char == 0s8:
     retval 0
@@ -114,7 +114,7 @@ proc str_to_s64(str: s64) -> s64:
 
   while 1 == 1:
     ptr = str + i
-    char = *ptr
+    char = *s8 ptr
 
     zero = '0'
     zero_s8 = cast s8 zero
@@ -129,10 +129,9 @@ proc str_to_s64(str: s64) -> s64:
     end
 
     digit = char - zero_s8
-    digit_s64 = cast s64 digit
 
     num = num * 10
-    num = num + digit_s64
+    num = num + digit
 
     i = i + 1
   end

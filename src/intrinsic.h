@@ -7,5 +7,6 @@
 void proc_compile_bin_intrinsic(Procedure *proc, Str dest, Str op, IrArg arg0, IrArg arg1);
 void proc_compile_un_intrinsic(Procedure *proc, Str dest, Str op, IrArg arg);
 void proc_compile_pre_assign_intrinsic(Procedure *proc, Str dest, Str op, IrArg arg);
+void proc_compile_deref_intrinsic(Procedure *proc, Str dest, Type *type, IrArg arg);
 
 #endif // INTRINSIC_H

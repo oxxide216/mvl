@@ -1,8 +1,8 @@
 #include <string.h>
 
 #include "lexer.h"
-#include "shl_log.h"
-#include "shl_arena.h"
+#include "shl/shl-log.h"
+#include "shl/shl-arena.h"
 #include "lexgen/runtime-src/runtime.h"
 #include "../grammar.h"
 
@@ -67,14 +67,14 @@ void lex(Str text, Tokens *tokens, Str file_path) {
 
     Token new_token = { lexeme, token_id, row, col, file_path };
 
-    col += lexeme.len;
-
     if (token_id == TT_NEWLINE) {
       ++row;
       col = 0;
 
       continue;
     }
+
+    col += lexeme.len;
 
     if (token_id == TT_WHITESPACE)
       continue;
