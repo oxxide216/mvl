@@ -1,7 +1,7 @@
 proc main() -> s64:
   a = 5
   ref = &a
-  b = *ref
+  b = *s64 ref
   *ref = 4
   c = a + b
 
