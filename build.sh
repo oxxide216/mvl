@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/usr/bin/bash
 
 CFLAGS="-Wall -Wextra -Ilibs"
 LDFLAGS="-z execstack"
