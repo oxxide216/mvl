@@ -3,7 +3,7 @@
 #include "lexer.h"
 #include "shl/shl-log.h"
 #include "shl/shl-arena.h"
-#include "lexgen/runtime-src/runtime.h"
+#include "lexgen/runtime.h"
 #include "../grammar.h"
 
 static char escape_char(char _char) {
@@ -52,8 +52,9 @@ void lex(Str text, Tokens *tokens, Str file_path) {
   u32 row = 0, col = 0;
 
   while (text.len > 0) {
+    u32 token_len;
     u64 token_id = 0;
-    Str lexeme = table_matches(table, &text, &token_id);
+    Str lexeme = table_matches(table, &text, &token_id, &token_len);
 
     if (token_id == (u64) -1) {
       if (text.len == 0)
@@ -74,7 +75,7 @@ void lex(Str text, Tokens *tokens, Str file_path) {
       continue;
     }
 
-    col += lexeme.len;
+    col += token_len;
 
     if (token_id == TT_WHITESPACE)
       continue;
@@ -101,36 +102,45 @@ void lex(Str text, Tokens *tokens, Str file_path) {
     }
 
     if (token_id == TT_STR_LIT) {
-      u32 i = 0;
       bool is_escaped = false;
+      u32 next_len;
+      wchar next = get_next_wchar(text, 0, &next_len);
+      u32 str_len = 0;
 
-      while (i < (u32) text.len && (text.ptr[i] != '"' || is_escaped)) {
+      while (next != '\0' && (next != '"' || is_escaped)) {
         ++col;
 
-        if (text.ptr[i] == '\\')
+        str_len += next_len;
+
+        text.ptr += next_len;
+        text.len -= next_len;
+
+        next = get_next_wchar(text, 0, &next_len);
+
+        if (next == '\\')
           is_escaped = true;
         else
           is_escaped = false;
 
-        if (text.ptr[i] == '\n') {
+        if (next == '\n') {
           ++row;
           col = 0;
         }
-
-        ++i;
       }
 
-      if (i == (u32) text.len) {
+      if (next == '\0') {
         PERROR(STR_FMT":%u:%u: ", "unclosed string literal\n",
                STR_ARG(file_path), new_token.row + 1, new_token.col + 1);
         exit(1);
       }
 
-      text.ptr += i + 1;
-      text.len -= i + 1;
+      str_len += next_len;
+
+      text.ptr += next_len;
+      text.len -= next_len;
 
       new_token.lexeme.ptr += 1;
-      new_token.lexeme.len += i - 1;
+      new_token.lexeme.len += str_len - 2;
 
       new_token.lexeme = escape_str(new_token.lexeme);
     }

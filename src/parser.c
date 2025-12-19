@@ -3,7 +3,7 @@
 
 #include "parser.h"
 #include "mvm/src/misc.h"
-#include "lexgen/runtime-src/runtime.h"
+#include "lexgen/runtime.h"
 #include "../grammar.h"
 #include "ir.h"
 #include "ir_to_mvm.h"

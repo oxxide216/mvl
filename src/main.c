@@ -3,7 +3,7 @@
 #include "mvm/src/mvm.h"
 #include "mvm/src/misc.h"
 #define LEXGEN_TRANSITION_TABLE_IMPLEMENTATION
-#include "lexgen/runtime-src/runtime.h"
+#include "lexgen/runtime.h"
 #include "../grammar.h"
 #include "io.h"
 #include "parser.h"
